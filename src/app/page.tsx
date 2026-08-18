@@ -60,31 +60,8 @@ export default async function Home() {
     );
   }
 
-  // ACTIVE — Phase 1 placeholder (training/nutrition/check-ins come in later phases).
-  const weekLine = weekOf(client.startDate, client.endDate);
-  return (
-    <Shell name={user.firstName}>
-      <p className="eyebrow">Your coaching is active</p>
-      <h1 className="mt-2 text-2xl font-bold">Welcome to your 4HR portal</h1>
-      {weekLine && <p className="mt-2 text-brand font-semibold">{weekLine}</p>}
-      <p className="mt-3 text-fg-muted">
-        Your training plan, nutrition targets, check-ins and progress tools are being added here soon.
-      </p>
-    </Shell>
-  );
-}
-
-/** "Week X of Y" from configurable dates (no hardcoded 12). */
-function weekOf(start: string | null, end: string | null): string | null {
-  if (!start) return null;
-  const s = new Date(start).getTime();
-  const now = Date.now();
-  const week = Math.max(1, Math.floor((now - s) / (7 * 24 * 3600 * 1000)) + 1);
-  if (end) {
-    const total = Math.max(1, Math.round((new Date(end).getTime() - s) / (7 * 24 * 3600 * 1000)));
-    return `Week ${Math.min(week, total)} of ${total}`;
-  }
-  return `Week ${week}`;
+  // ACTIVE — the client's live portal is the training screen.
+  redirect("/train");
 }
 
 function Shell({ name, children }: { name: string | null; children: React.ReactNode }) {

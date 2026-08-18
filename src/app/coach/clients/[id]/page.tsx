@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq, and, desc } from "drizzle-orm";
-import { db, clients, onboardingResponses, programs, assignments } from "@/db";
+import { eq, and, desc, inArray } from "drizzle-orm";
+import { db, clients, onboardingResponses, programs, assignments, workoutLogs, setLogs } from "@/db";
 import { requireCoach } from "@/lib/auth";
 import { updateCoachNotes, setClientStatus, setClientDates } from "@/lib/actions";
 import { assignProgram } from "@/lib/training";
@@ -33,6 +33,18 @@ export default async function ClientDetail({ params }: { params: Promise<{ id: s
     .innerJoin(programs, eq(assignments.programId, programs.id))
     .where(and(eq(assignments.clientId, id), eq(assignments.active, true)))
     .limit(1);
+
+  // Logged workouts (most recent first) + their sets.
+  const logs = await db
+    .select()
+    .from(workoutLogs)
+    .where(eq(workoutLogs.clientId, id))
+    .orderBy(desc(workoutLogs.performedOn), desc(workoutLogs.createdAt))
+    .limit(15);
+  const logIds = logs.map((l) => l.id);
+  const allSets = logIds.length
+    ? await db.select().from(setLogs).where(inArray(setLogs.workoutLogId, logIds))
+    : [];
 
   // Inline form adapters (delegate to authorization-guarded lib actions).
   async function assign(formData: FormData) {
@@ -130,6 +142,44 @@ export default async function ClientDetail({ params }: { params: Promise<{ id: s
           </form>
           {programsList.length === 0 && (
             <p className="mt-2 text-xs text-amber-500">Create a program first (Programs tab).</p>
+          )}
+        </section>
+
+        {/* Training log */}
+        <section className="card p-5">
+          <h2 className="font-semibold">Training log</h2>
+          {logs.length === 0 ? (
+            <p className="mt-3 text-sm text-fg-muted">No workouts logged yet.</p>
+          ) : (
+            <div className="mt-3 space-y-4">
+              {logs.map((log) => {
+                const rows = allSets.filter((s) => s.workoutLogId === log.id);
+                const byExercise: { name: string; sets: typeof rows }[] = [];
+                for (const r of rows) {
+                  const bucket = byExercise.find((b) => b.name === r.exerciseName);
+                  if (bucket) bucket.sets.push(r);
+                  else byExercise.push({ name: r.exerciseName, sets: [r] });
+                }
+                return (
+                  <div key={log.id} className="border-b border-line/50 pb-3 last:border-0 last:pb-0">
+                    <div className="flex items-baseline justify-between">
+                      <p className="font-medium text-sm">{log.dayTitle ?? "Workout"}</p>
+                      <span className="text-xs text-fg-muted tabular-nums">{log.performedOn}</span>
+                    </div>
+                    {byExercise.map((b) => (
+                      <p key={b.name} className="mt-1 text-xs text-fg-muted">
+                        <span className="text-fg">{b.name}:</span>{" "}
+                        {b.sets
+                          .sort((a, c) => a.setNo - c.setNo)
+                          .map((s) => `${s.weight ?? "—"}${s.reps != null ? `×${s.reps}` : ""}${s.rpe ? ` @${s.rpe}` : ""}`)
+                          .join(",  ")}
+                      </p>
+                    ))}
+                    {log.notes && <p className="mt-1 text-xs italic text-fg-muted">“{log.notes}”</p>}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </section>
 
