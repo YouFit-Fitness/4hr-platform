@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { desc } from "drizzle-orm";
-import { UserButton } from "@clerk/nextjs";
 import { db, clients } from "@/db";
 import { requireCoach, isCoachEmailConfigured } from "@/lib/auth";
 import { InviteForm } from "@/components/InviteForm";
+import { CoachHeader } from "@/components/CoachHeader";
 
 const STATUS_ORDER = ["ONBOARDING", "PLAN_SETUP", "INVITED", "ACTIVE", "PAUSED", "COMPLETED"] as const;
 const STATUS_LABEL: Record<string, string> = {
@@ -18,10 +18,7 @@ export default async function CoachHome() {
 
   return (
     <div className="min-h-dvh">
-      <header className="flex items-center justify-between px-6 h-16 border-b border-line">
-        <span className="eyebrow">4HR · Coach</span>
-        <UserButton />
-      </header>
+      <CoachHeader active="clients" />
 
       <main className="mx-auto max-w-5xl px-6 py-8">
         <div className="flex items-start justify-between gap-6 flex-wrap">
