@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { eq, desc } from "drizzle-orm";
-import { db, clients, onboardingResponses } from "@/db";
+import { eq, and, desc } from "drizzle-orm";
+import { db, clients, onboardingResponses, programs, assignments } from "@/db";
 import { requireCoach } from "@/lib/auth";
 import { updateCoachNotes, setClientStatus, setClientDates } from "@/lib/actions";
+import { assignProgram } from "@/lib/training";
 import { onboardingSections } from "@/lib/onboarding";
 
 const LABELS: Record<string, string> = Object.fromEntries(
@@ -25,7 +26,19 @@ export default async function ClientDetail({ params }: { params: Promise<{ id: s
     .limit(1);
   const answers = (onboarding?.data ?? null) as Record<string, string> | null;
 
+  const programsList = await db.select().from(programs).orderBy(desc(programs.createdAt));
+  const [activeAssign] = await db
+    .select({ programName: programs.name, programId: programs.id })
+    .from(assignments)
+    .innerJoin(programs, eq(assignments.programId, programs.id))
+    .where(and(eq(assignments.clientId, id), eq(assignments.active, true)))
+    .limit(1);
+
   // Inline form adapters (delegate to authorization-guarded lib actions).
+  async function assign(formData: FormData) {
+    "use server";
+    await assignProgram(id, String(formData.get("programId") ?? ""));
+  }
   async function saveNotes(formData: FormData) {
     "use server";
     await updateCoachNotes(id, String(formData.get("notes") ?? ""));
@@ -91,6 +104,33 @@ export default async function ClientDetail({ params }: { params: Promise<{ id: s
             </div>
             <button className="btn btn-ghost text-sm">Save dates</button>
           </form>
+        </section>
+
+        {/* Training program */}
+        <section className="card p-5">
+          <h2 className="font-semibold">Training program</h2>
+          <p className="mt-1 text-sm text-fg-muted">
+            {activeAssign ? (
+              <>Currently on <span className="text-fg font-medium">{activeAssign.programName}</span>.</>
+            ) : (
+              <>No program assigned yet.</>
+            )}
+          </p>
+          <form action={assign} className="mt-3 flex flex-wrap items-end gap-3">
+            <div className="flex-1 min-w-[200px]">
+              <label className="label">{activeAssign ? "Change program" : "Assign a program"}</label>
+              <select name="programId" required defaultValue="" className="input">
+                <option value="" disabled>Choose a program…</option>
+                {programsList.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+            <button className="btn btn-primary text-sm">Assign</button>
+          </form>
+          {programsList.length === 0 && (
+            <p className="mt-2 text-xs text-amber-500">Create a program first (Programs tab).</p>
+          )}
         </section>
 
         {/* Onboarding review */}

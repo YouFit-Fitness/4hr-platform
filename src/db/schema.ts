@@ -1,4 +1,4 @@
-import { pgTable, pgEnum, uuid, text, timestamp, jsonb, date } from "drizzle-orm/pg-core";
+import { pgTable, pgEnum, uuid, text, timestamp, jsonb, date, integer, boolean } from "drizzle-orm/pg-core";
 
 /**
  * 4HR platform — core identity + client-lifecycle schema (Phase 1 only).
@@ -62,6 +62,85 @@ export const onboardingResponses = pgTable("onboarding_responses", {
   submittedAt: timestamp("submitted_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// ── Phase 2A: Training ──────────────────────────────────────────────────────
+
+/** Reusable exercise library (coach-managed). Optional demo video for clients. */
+export const exercises = pgTable("exercises", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  muscleGroup: text("muscle_group"),
+  videoUrl: text("video_url"),
+  cues: text("cues"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** A training program template — a set of workout days that repeat weekly. */
+export const programs = pgTable("programs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  description: text("description").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const programDays = pgTable("program_days", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  programId: uuid("program_id").notNull().references(() => programs.id, { onDelete: "cascade" }),
+  orderIndex: integer("order_index").notNull().default(0),
+  title: text("title").notNull(),
+});
+
+export const programExercises = pgTable("program_exercises", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  programDayId: uuid("program_day_id").notNull().references(() => programDays.id, { onDelete: "cascade" }),
+  exerciseId: uuid("exercise_id").notNull().references(() => exercises.id, { onDelete: "restrict" }),
+  orderIndex: integer("order_index").notNull().default(0),
+  targetSets: integer("target_sets"),
+  targetReps: text("target_reps"), // e.g. "8–12"
+  targetRpe: text("target_rpe"),
+  restSeconds: integer("rest_seconds"),
+  notes: text("notes").notNull().default(""),
+});
+
+/** Which program a client is on. One active program per client (MVP). */
+export const assignments = pgTable("assignments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clientId: uuid("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+  programId: uuid("program_id").notNull().references(() => programs.id, { onDelete: "restrict" }),
+  active: boolean("active").notNull().default(true),
+  assignedAt: timestamp("assigned_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** A logged training session for a given program day. */
+export const workoutLogs = pgTable("workout_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clientId: uuid("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+  programDayId: uuid("program_day_id").references(() => programDays.id, { onDelete: "set null" }),
+  dayTitle: text("day_title"), // snapshot for history if the day is later changed
+  performedOn: date("performed_on").notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  notes: text("notes").notNull().default(""),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** One logged set within a workout. Exercise name is snapshotted for history. */
+export const setLogs = pgTable("set_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workoutLogId: uuid("workout_log_id").notNull().references(() => workoutLogs.id, { onDelete: "cascade" }),
+  exerciseId: uuid("exercise_id").references(() => exercises.id, { onDelete: "set null" }),
+  exerciseName: text("exercise_name").notNull(),
+  setNo: integer("set_no").notNull(),
+  weight: text("weight"), // text to allow units / "bodyweight"
+  reps: integer("reps"),
+  rpe: text("rpe"),
+});
+
 export type User = typeof users.$inferSelect;
 export type Client = typeof clients.$inferSelect;
 export type OnboardingResponse = typeof onboardingResponses.$inferSelect;
+export type Exercise = typeof exercises.$inferSelect;
+export type Program = typeof programs.$inferSelect;
+export type ProgramDay = typeof programDays.$inferSelect;
+export type ProgramExercise = typeof programExercises.$inferSelect;
+export type Assignment = typeof assignments.$inferSelect;
+export type WorkoutLog = typeof workoutLogs.$inferSelect;
+export type SetLog = typeof setLogs.$inferSelect;
