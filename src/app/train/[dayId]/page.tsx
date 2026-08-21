@@ -20,14 +20,16 @@ export default async function LogDay({ params }: { params: Promise<{ dayId: stri
 
   return (
     <div className="min-h-dvh">
-      <header className="flex items-center justify-between px-5 h-16 border-b border-line">
-        <Link href="/train" className="text-sm text-fg-muted hover:text-fg">← Training</Link>
-        <span className="eyebrow">4HR</span>
+      <header className="border-b border-line">
+        <div className="mx-auto max-w-xl h-16 px-5 flex items-center justify-between">
+          <Link href="/train" className="text-sm text-fg-muted hover:text-fg">← Training</Link>
+          <span className="eyebrow">4HR</span>
+        </div>
       </header>
 
-      <main className="mx-auto max-w-lg px-5 py-6">
+      <main className="mx-auto max-w-xl px-5 py-6">
         <h1 className="text-2xl font-bold mb-1">{day.day.title}</h1>
-        <p className="text-sm text-fg-muted mb-5">Log each set as you go. Only filled sets are saved.</p>
+        <p className="text-sm text-fg-muted mb-5">Log each set as you train. Only filled sets are saved.</p>
 
         {day.items.length === 0 ? (
           <div className="card p-6 text-center text-sm text-fg-muted">

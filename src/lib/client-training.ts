@@ -131,6 +131,8 @@ export async function getDayWithExercises(dayId: string) {
       id: programExercises.id,
       exerciseId: programExercises.exerciseId,
       name: exercises.name,
+      muscleGroup: exercises.muscleGroup,
+      cues: exercises.cues,
       videoUrl: exercises.videoUrl,
       targetSets: programExercises.targetSets,
       targetReps: programExercises.targetReps,
