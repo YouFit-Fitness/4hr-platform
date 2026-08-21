@@ -9,15 +9,8 @@
  *
  * Run:  node scripts/seed-exercises.mjs
  */
-import { readFileSync } from "node:fs";
-import { neon } from "@neondatabase/serverless";
-
-const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
-const url = env.split(/\r?\n/).find((l) => l.startsWith("DATABASE_URL=")).slice("DATABASE_URL=".length).trim().replace(/^"|"$/g, "");
-const sql = neon(url);
-
 // [name, muscleGroup, equipment, category, cues]
-const LIB = [
+export const LIB = [
   // ── Chest ──────────────────────────────────────────────────────────────
   ["Barbell Bench Press", "Chest", "Barbell", "Horizontal Push", "Retract the shoulder blades\nLower to the mid-chest\nDrive the bar up and slightly back"],
   ["Incline Barbell Bench Press", "Chest", "Barbell", "Horizontal Push", "Set the bench to 30°\nKeep elbows ~45° from the torso\nTouch the upper chest"],
@@ -173,16 +166,25 @@ const LIB = [
 
 const norm = (s) => s.trim().toLowerCase();
 
-const existingRows = await sql`select name from exercises`;
-const existing = new Set(existingRows.map((r) => norm(r.name)));
+// Only run the insert when executed directly (so other scripts can import LIB).
+import { pathToFileURL } from "node:url";
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const { readFileSync } = await import("node:fs");
+  const { neon } = await import("@neondatabase/serverless");
+  const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
+  const url = env.split(/\r?\n/).find((l) => l.startsWith("DATABASE_URL=")).slice("DATABASE_URL=".length).trim().replace(/^"|"$/g, "");
+  const sql = neon(url);
 
-let inserted = 0, skipped = 0;
-for (const [name, muscle, , , cues] of LIB) {
-  if (existing.has(norm(name))) { skipped++; continue; }
-  await sql`insert into exercises (name, muscle_group, cues) values (${name}, ${muscle}, ${cues})`;
-  existing.add(norm(name));
-  inserted++;
+  const existingRows = await sql`select name from exercises`;
+  const existing = new Set(existingRows.map((r) => norm(r.name)));
+
+  let inserted = 0, skipped = 0;
+  for (const [name, muscle, , , cues] of LIB) {
+    if (existing.has(norm(name))) { skipped++; continue; }
+    await sql`insert into exercises (name, muscle_group, cues) values (${name}, ${muscle}, ${cues})`;
+    existing.add(norm(name));
+    inserted++;
+  }
+  const total = (await sql`select count(*)::int n from exercises`)[0].n;
+  console.log(`Seed complete. Inserted ${inserted}, skipped ${skipped} (already existed). Library now has ${total} exercises.`);
 }
-
-const total = (await sql`select count(*)::int n from exercises`)[0].n;
-console.log(`Seed complete. Inserted ${inserted}, skipped ${skipped} (already existed). Library now has ${total} exercises.`);

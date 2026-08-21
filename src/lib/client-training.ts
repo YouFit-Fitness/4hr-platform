@@ -137,6 +137,7 @@ export async function getDayWithExercises(dayId: string) {
       targetSets: programExercises.targetSets,
       targetReps: programExercises.targetReps,
       targetRpe: programExercises.targetRpe,
+      tempo: programExercises.tempo,
       restSeconds: programExercises.restSeconds,
       notes: programExercises.notes,
     })

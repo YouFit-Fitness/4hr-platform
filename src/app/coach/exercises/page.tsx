@@ -8,7 +8,15 @@ import { ExerciseBrowser } from "@/components/ExerciseBrowser";
 export default async function ExerciseLibrary() {
   await requireCoach();
   const list = await db
-    .select({ id: exercises.id, name: exercises.name, muscleGroup: exercises.muscleGroup, videoUrl: exercises.videoUrl, cues: exercises.cues })
+    .select({
+      id: exercises.id,
+      name: exercises.name,
+      muscleGroup: exercises.muscleGroup,
+      equipment: exercises.equipment,
+      videoUrl: exercises.videoUrl,
+      cues: exercises.cues,
+      archived: exercises.archived,
+    })
     .from(exercises)
     .orderBy(asc(exercises.name));
 

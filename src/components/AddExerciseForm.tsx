@@ -16,9 +16,19 @@ export function AddExerciseForm() {
         <label className="label">Name</label>
         <input name="name" required placeholder="Barbell Back Squat" className="input" />
       </div>
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="label">Muscle group</label>
+          <input name="muscleGroup" placeholder="Chest" className="input" />
+        </div>
+        <div>
+          <label className="label">Equipment</label>
+          <input name="equipment" placeholder="Barbell" className="input" />
+        </div>
+      </div>
       <div>
-        <label className="label">Muscle group <span className="text-fg-muted font-normal">(optional)</span></label>
-        <input name="muscleGroup" placeholder="Legs" className="input" />
+        <label className="label">Movement category <span className="text-fg-muted font-normal">(optional)</span></label>
+        <input name="movementCategory" placeholder="Horizontal Push" className="input" />
       </div>
       <div>
         <label className="label">Demo video URL <span className="text-fg-muted font-normal">(optional)</span></label>

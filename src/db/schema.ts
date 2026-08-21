@@ -69,8 +69,11 @@ export const exercises = pgTable("exercises", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   muscleGroup: text("muscle_group"),
+  equipment: text("equipment"), // Barbell / Dumbbell / Cable / Machine / Bodyweight / …
+  movementCategory: text("movement_category"), // Horizontal Push / Hinge / Squat / Isolation / …
   videoUrl: text("video_url"),
   cues: text("cues"),
+  archived: boolean("archived").notNull().default(false), // hide without deleting (history-safe)
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -97,6 +100,7 @@ export const programExercises = pgTable("program_exercises", {
   targetSets: integer("target_sets"),
   targetReps: text("target_reps"), // e.g. "8–12"
   targetRpe: text("target_rpe"),
+  tempo: text("tempo"), // e.g. "3-1-1"
   restSeconds: integer("rest_seconds"),
   notes: text("notes").notNull().default(""),
 });

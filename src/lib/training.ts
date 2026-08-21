@@ -13,6 +13,8 @@ export async function createExercise(_prev: unknown, formData: FormData): Promis
   await db.insert(exercises).values({
     name: name.data,
     muscleGroup: str(formData.get("muscleGroup"), 60) || null,
+    equipment: str(formData.get("equipment"), 40) || null,
+    movementCategory: str(formData.get("movementCategory"), 40) || null,
     videoUrl: str(formData.get("videoUrl"), 500) || null,
     cues: str(formData.get("cues"), 1000) || null,
   });
@@ -23,6 +25,13 @@ export async function createExercise(_prev: unknown, formData: FormData): Promis
 export async function deleteExercise(id: string): Promise<void> {
   await requireCoach();
   await db.delete(exercises).where(eq(exercises.id, id));
+  revalidatePath("/coach/exercises");
+}
+
+/** Archive/unarchive an exercise — hides it from pickers without touching history. */
+export async function setExerciseArchived(id: string, archived: boolean): Promise<void> {
+  await requireCoach();
+  await db.update(exercises).set({ archived }).where(eq(exercises.id, id));
   revalidatePath("/coach/exercises");
 }
 
@@ -87,6 +96,7 @@ export async function addExerciseToProgramDay(
     targetSets: num(formData.get("targetSets")),
     targetReps: str(formData.get("targetReps"), 20) || null,
     targetRpe: str(formData.get("targetRpe"), 10) || null,
+    tempo: str(formData.get("tempo"), 20) || null,
     restSeconds: num(formData.get("restSeconds")),
     notes: str(formData.get("notes"), 300),
   });

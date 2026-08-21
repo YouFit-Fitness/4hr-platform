@@ -1,4 +1,4 @@
-import { deleteExercise, deleteProgramDay, removeProgramExercise, moveProgramExercise } from "@/lib/training";
+import { deleteExercise, deleteProgramDay, removeProgramExercise, moveProgramExercise, setExerciseArchived } from "@/lib/training";
 
 /** Small delete controls that submit bound server actions (server-safe forms). */
 
@@ -6,6 +6,14 @@ export function DeleteExerciseButton({ id }: { id: string }) {
   return (
     <form action={deleteExercise.bind(null, id)}>
       <button className="text-xs text-fg-muted hover:text-red-500 transition-colors">Delete</button>
+    </form>
+  );
+}
+
+export function ArchiveExerciseButton({ id, archived }: { id: string; archived: boolean }) {
+  return (
+    <form action={setExerciseArchived.bind(null, id, !archived)}>
+      <button className="text-xs text-fg-muted hover:text-fg transition-colors">{archived ? "Restore" : "Archive"}</button>
     </form>
   );
 }

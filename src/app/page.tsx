@@ -1,6 +1,14 @@
 import { redirect } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { getSessionUser, getMyClientRecord, isCoachEmailConfigured } from "@/lib/auth";
+import { getActiveProgram } from "@/lib/client-training";
+
+function totalWeeks(start: string | null, end: string | null): number | null {
+  if (!start || !end) return null;
+  const s = new Date(start.slice(0, 10) + "T00:00:00").getTime();
+  const e = new Date(end.slice(0, 10) + "T00:00:00").getTime();
+  return Math.max(1, Math.round((e - s) / (7 * 864e5)));
+}
 
 /** Root dispatcher: routes each user to the right place by role + client status. */
 export default async function Home() {
@@ -52,10 +60,39 @@ export default async function Home() {
   }
 
   if (client.status === "COMPLETED") {
+    const active = await getActiveProgram(client.id);
+    const weeks = totalWeeks(client.startDate, client.endDate);
     return (
       <Shell name={user.firstName}>
-        <h1 className="text-2xl font-bold">Your program is complete 🎉</h1>
-        <p className="mt-3 text-fg-muted">Thank you for training with 4HR. Talk to Youssef about what&apos;s next.</p>
+        <section className="card p-6 sm:p-8">
+          <p className="eyebrow">4HR Transformation</p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight">Program complete</h1>
+          <p className="mt-2 text-fg-muted">You&apos;ve completed your current training block.</p>
+
+          {(active?.program?.name || weeks) && (
+            <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-line pt-5">
+              {active?.program?.name && (
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-fg-muted">Program</dt>
+                  <dd className="mt-0.5 font-medium">{active.program.name}</dd>
+                </div>
+              )}
+              {weeks && (
+                <div>
+                  <dt className="text-xs uppercase tracking-wide text-fg-muted">Completed</dt>
+                  <dd className="mt-0.5 font-medium tabular-nums">{weeks} of {weeks} weeks</dd>
+                </div>
+              )}
+            </dl>
+          )}
+
+          <div className="mt-6 rounded-lg border border-line bg-surface/40 p-4">
+            <p className="text-sm font-medium">Next block coming soon</p>
+            <p className="mt-1 text-sm text-fg-muted">
+              Youssef will review your progress and update your training before your next phase begins.
+            </p>
+          </div>
+        </section>
       </Shell>
     );
   }

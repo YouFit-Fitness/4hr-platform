@@ -2,7 +2,7 @@
 import { useMemo, useRef, useState, useEffect, useActionState } from "react";
 import { addExerciseToProgramDay } from "@/lib/training";
 
-type Exercise = { id: string; name: string; muscleGroup: string | null };
+type Exercise = { id: string; name: string; muscleGroup: string | null; equipment: string | null };
 
 export function AddExerciseToDay({ programId, dayId, library }: { programId: string; dayId: string; library: Exercise[] }) {
   const [state, action, pending] = useActionState(addExerciseToProgramDay.bind(null, programId), null as null | { ok: boolean; message: string });
@@ -11,18 +11,22 @@ export function AddExerciseToDay({ programId, dayId, library }: { programId: str
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [muscle, setMuscle] = useState("");
+  const [equipment, setEquipment] = useState("");
   const [selected, setSelected] = useState<Exercise | null>(null);
 
-  const muscles = useMemo(
-    () => Array.from(new Set(library.map((e) => e.muscleGroup).filter(Boolean) as string[])).sort(),
-    [library],
-  );
+  const muscles = useMemo(() => uniq(library.map((e) => e.muscleGroup)), [library]);
+  const equipments = useMemo(() => uniq(library.map((e) => e.equipment)), [library]);
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return library
-      .filter((e) => (!muscle || e.muscleGroup === muscle) && (!needle || e.name.toLowerCase().includes(needle)))
+      .filter(
+        (e) =>
+          (!muscle || e.muscleGroup === muscle) &&
+          (!equipment || e.equipment === equipment) &&
+          (!needle || e.name.toLowerCase().includes(needle)),
+      )
       .slice(0, 60);
-  }, [library, q, muscle]);
+  }, [library, q, muscle, equipment]);
 
   // Reset after a successful add.
   useEffect(() => {
@@ -55,11 +59,15 @@ export function AddExerciseToDay({ programId, dayId, library }: { programId: str
 
         {open && (
           <div className="mt-2 rounded-lg border border-line bg-surface-2 p-2">
-            <div className="flex gap-2">
-              <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="input flex-1 py-2 text-sm" aria-label="Search exercises" />
-              <select value={muscle} onChange={(e) => setMuscle(e.target.value)} className="input w-36 py-2 text-sm" aria-label="Filter by muscle group">
-                <option value="">All</option>
+            <div className="flex flex-wrap gap-2">
+              <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="input flex-1 min-w-[8rem] py-2 text-sm" aria-label="Search exercises" />
+              <select value={muscle} onChange={(e) => setMuscle(e.target.value)} className="input w-32 py-2 text-sm" aria-label="Filter by muscle group">
+                <option value="">All muscles</option>
                 {muscles.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className="input w-32 py-2 text-sm" aria-label="Filter by equipment">
+                <option value="">All equipment</option>
+                {equipments.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
             </div>
             <ul className="mt-2 max-h-56 overflow-y-auto">
@@ -82,10 +90,11 @@ export function AddExerciseToDay({ programId, dayId, library }: { programId: str
       </div>
 
       {/* Prescription (client-specific) */}
-      <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="mt-3 grid grid-cols-2 sm:grid-cols-5 gap-2">
         <div><label className="label text-xs">Sets</label><input name="targetSets" inputMode="numeric" className="input py-2" /></div>
         <div><label className="label text-xs">Reps</label><input name="targetReps" placeholder="8–12" className="input py-2" /></div>
         <div><label className="label text-xs">RPE</label><input name="targetRpe" inputMode="decimal" className="input py-2" /></div>
+        <div><label className="label text-xs">Tempo</label><input name="tempo" placeholder="3-1-1" className="input py-2" /></div>
         <div><label className="label text-xs">Rest (s)</label><input name="restSeconds" inputMode="numeric" className="input py-2" /></div>
       </div>
       <div className="mt-2">
@@ -99,4 +108,8 @@ export function AddExerciseToDay({ programId, dayId, library }: { programId: str
       </div>
     </form>
   );
+}
+
+function uniq(vals: (string | null)[]): string[] {
+  return Array.from(new Set(vals.filter(Boolean) as string[])).sort();
 }

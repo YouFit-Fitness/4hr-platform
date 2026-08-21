@@ -18,8 +18,9 @@ export default async function ProgramBuilder({ params }: { params: Promise<{ id:
   const days = await db.select().from(programDays).where(eq(programDays.programId, id)).orderBy(asc(programDays.orderIndex));
   const dayIds = days.map((d) => d.id);
   const library = await db
-    .select({ id: exercises.id, name: exercises.name, muscleGroup: exercises.muscleGroup })
+    .select({ id: exercises.id, name: exercises.name, muscleGroup: exercises.muscleGroup, equipment: exercises.equipment })
     .from(exercises)
+    .where(eq(exercises.archived, false))
     .orderBy(asc(exercises.name));
 
   const pes = dayIds.length
@@ -31,6 +32,7 @@ export default async function ProgramBuilder({ params }: { params: Promise<{ id:
           targetSets: programExercises.targetSets,
           targetReps: programExercises.targetReps,
           targetRpe: programExercises.targetRpe,
+          tempo: programExercises.tempo,
           restSeconds: programExercises.restSeconds,
           notes: programExercises.notes,
           exerciseName: exercises.name,
@@ -79,6 +81,7 @@ export default async function ProgramBuilder({ params }: { params: Promise<{ id:
                           {" · "}
                           {it.targetSets ?? "?"}×{it.targetReps ?? "?"}
                           {it.targetRpe ? ` @RPE ${it.targetRpe}` : ""}
+                          {it.tempo ? ` · tempo ${it.tempo}` : ""}
                           {it.restSeconds ? ` · ${it.restSeconds}s rest` : ""}
                         </span>
                         {it.notes && <p className="text-xs text-fg-muted">{it.notes}</p>}

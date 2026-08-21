@@ -13,6 +13,7 @@ type Item = {
   targetSets: number | null;
   targetReps: string | null;
   targetRpe: string | null;
+  tempo: string | null;
   restSeconds: number | null;
   notes: string;
 };
@@ -243,11 +244,12 @@ function ExerciseCard({
       </div>
 
       {/* Prescription (target) */}
-      {(rx || rest) && (
+      {(rx || rest || item.tempo) && (
         <p className="mt-1.5 text-sm">
           {rx && <span className="text-fg-muted">Target: </span>}
           {rx && <span className="font-medium">{rx}</span>}
-          {rest && <span className="text-fg-muted">{rx ? " · " : ""}{rest}</span>}
+          {item.tempo && <span className="text-fg-muted">{rx ? " · " : ""}tempo {item.tempo}</span>}
+          {rest && <span className="text-fg-muted">{rx || item.tempo ? " · " : ""}{rest}</span>}
         </p>
       )}
       {item.notes && <p className="mt-1 text-xs text-fg-muted">{item.notes}</p>}
