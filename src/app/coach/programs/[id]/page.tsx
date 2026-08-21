@@ -5,6 +5,7 @@ import { requireCoach } from "@/lib/auth";
 import { addProgramDay, addExerciseToDay } from "@/lib/training";
 import { CoachHeader } from "@/components/CoachHeader";
 import { DeleteDayButton, RemoveProgramExerciseButton } from "@/components/TrainingButtons";
+import { DeleteProgramButton } from "@/components/DeleteProgramButton";
 
 export default async function ProgramBuilder({ params }: { params: Promise<{ id: string }> }) {
   await requireCoach();
@@ -45,10 +46,13 @@ export default async function ProgramBuilder({ params }: { params: Promise<{ id:
     <div className="min-h-dvh">
       <CoachHeader active="programs" />
       <main className="mx-auto max-w-3xl px-6 py-8 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">{program.name}</h1>
-          {program.description && <p className="text-sm text-fg-muted mt-1">{program.description}</p>}
-          <p className="text-xs text-fg-muted mt-1">Workout days repeat weekly. Assign this program to a client from their profile.</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">{program.name}</h1>
+            {program.description && <p className="text-sm text-fg-muted mt-1">{program.description}</p>}
+            <p className="text-xs text-fg-muted mt-1">Workout days repeat weekly. Assign this program to a client from their profile.</p>
+          </div>
+          <DeleteProgramButton programId={id} />
         </div>
 
         {days.map((day) => {

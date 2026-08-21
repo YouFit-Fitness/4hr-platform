@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { getMyClientRecord } from "@/lib/auth";
-import { clientOwnsDay, getDayWithExercises } from "@/lib/client-training";
+import { clientOwnsDay, getDayWithExercises, lastSessionForDay } from "@/lib/client-training";
 import { WorkoutLogger } from "@/components/WorkoutLogger";
 
 export default async function LogDay({ params }: { params: Promise<{ dayId: string }> }) {
@@ -15,6 +15,8 @@ export default async function LogDay({ params }: { params: Promise<{ dayId: stri
 
   const day = await getDayWithExercises(dayId);
   if (!day) notFound();
+
+  const last = await lastSessionForDay(client.id, dayId);
 
   return (
     <div className="min-h-dvh">
@@ -32,7 +34,13 @@ export default async function LogDay({ params }: { params: Promise<{ dayId: stri
             No exercises in this day yet. Check back once your coach adds them.
           </div>
         ) : (
-          <WorkoutLogger dayId={dayId} dayTitle={day.day.title} items={day.items} />
+          <WorkoutLogger
+            dayId={dayId}
+            dayTitle={day.day.title}
+            items={day.items}
+            lastByExerciseId={last?.byExerciseId ?? {}}
+            lastPerformedOn={last?.performedOn ?? null}
+          />
         )}
       </main>
     </div>

@@ -39,6 +39,21 @@ export async function createProgram(_prev: unknown, formData: FormData): Promise
   return { ok: true, message: "Program created.", id: row.id };
 }
 
+export async function deleteProgram(_prev: unknown, formData: FormData): Promise<{ ok: boolean; message: string }> {
+  await requireCoach();
+  const id = String(formData.get("programId") ?? "");
+  if (!id) return { ok: false, message: "Missing program." };
+  // Guard: a program that's been assigned to any client can't be deleted (it's
+  // referenced by their history). Days/exercises cascade-delete otherwise.
+  const refs = await db.select({ id: assignments.id }).from(assignments).where(eq(assignments.programId, id)).limit(1);
+  if (refs.length) {
+    return { ok: false, message: "This program is assigned to a client, so it can't be deleted. Unassign it first." };
+  }
+  await db.delete(programs).where(eq(programs.id, id));
+  revalidatePath("/coach/programs");
+  return { ok: true, message: "Program deleted." };
+}
+
 export async function addProgramDay(programId: string, title: string): Promise<void> {
   await requireCoach();
   const clean = title.trim().slice(0, 80);

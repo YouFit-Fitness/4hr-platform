@@ -15,10 +15,25 @@ type Item = {
   notes: string;
 };
 type SetEntry = { weight: string; reps: string; rpe: string };
+type PrevSet = { setNo: number; weight: string | null; reps: number | null; rpe: string | null };
 
 const blankSet = (): SetEntry => ({ weight: "", reps: "", rpe: "" });
+const fmtPrev = (s: PrevSet) =>
+  `${s.weight ?? "—"}${s.reps != null ? `×${s.reps}` : ""}${s.rpe ? ` @${s.rpe}` : ""}`;
 
-export function WorkoutLogger({ dayId, dayTitle, items }: { dayId: string; dayTitle: string; items: Item[] }) {
+export function WorkoutLogger({
+  dayId,
+  dayTitle,
+  items,
+  lastByExerciseId = {},
+  lastPerformedOn = null,
+}: {
+  dayId: string;
+  dayTitle: string;
+  items: Item[];
+  lastByExerciseId?: Record<string, PrevSet[]>;
+  lastPerformedOn?: string | null;
+}) {
   const router = useRouter();
   const action = logWorkout.bind(null, dayId);
   const [state, formAction, pending] = useActionState(action, null as null | { ok: boolean; message: string });
@@ -86,7 +101,9 @@ export function WorkoutLogger({ dayId, dayTitle, items }: { dayId: string; dayTi
     <form action={formAction} className="space-y-5 pb-28">
       <input type="hidden" name="payload" value={payload} />
 
-      {items.map((it) => (
+      {items.map((it) => {
+        const prev = lastByExerciseId[it.exerciseId] ?? [];
+        return (
         <section key={it.id} className="card p-4">
           <div className="flex items-baseline justify-between gap-3">
             <h2 className="font-semibold">{it.name}</h2>
@@ -101,6 +118,12 @@ export function WorkoutLogger({ dayId, dayTitle, items }: { dayId: string; dayTi
               Watch demo ↗
             </a>
           )}
+          {prev.length > 0 && (
+            <p className="mt-2 text-xs text-fg-muted">
+              <span className="text-brand">Last{lastPerformedOn ? ` (${lastPerformedOn})` : ""}:</span>{" "}
+              {prev.map(fmtPrev).join(",  ")}
+            </p>
+          )}
 
           <div className="mt-3 space-y-2">
             <div className="grid grid-cols-[1.5rem_1fr_1fr_1fr] gap-2 text-[11px] uppercase tracking-wide text-fg-muted">
@@ -109,9 +132,9 @@ export function WorkoutLogger({ dayId, dayTitle, items }: { dayId: string; dayTi
             {(sets[it.id] ?? []).map((s, idx) => (
               <div key={idx} className="grid grid-cols-[1.5rem_1fr_1fr_1fr] gap-2 items-center">
                 <span className="text-sm text-fg-muted tabular-nums">{idx + 1}</span>
-                <input inputMode="decimal" value={s.weight} onChange={(e) => update(it.id, idx, "weight", e.target.value)} placeholder={it.restSeconds ? "kg" : "kg"} className="input py-2 text-center" />
-                <input inputMode="numeric" value={s.reps} onChange={(e) => update(it.id, idx, "reps", e.target.value)} placeholder={it.targetReps ?? ""} className="input py-2 text-center" />
-                <input inputMode="decimal" value={s.rpe} onChange={(e) => update(it.id, idx, "rpe", e.target.value)} placeholder={it.targetRpe ?? ""} className="input py-2 text-center" />
+                <input inputMode="decimal" value={s.weight} onChange={(e) => update(it.id, idx, "weight", e.target.value)} placeholder={prev[idx]?.weight ?? "kg"} className="input py-2 text-center" />
+                <input inputMode="numeric" value={s.reps} onChange={(e) => update(it.id, idx, "reps", e.target.value)} placeholder={prev[idx]?.reps != null ? String(prev[idx]!.reps) : (it.targetReps ?? "")} className="input py-2 text-center" />
+                <input inputMode="decimal" value={s.rpe} onChange={(e) => update(it.id, idx, "rpe", e.target.value)} placeholder={prev[idx]?.rpe ?? it.targetRpe ?? ""} className="input py-2 text-center" />
               </div>
             ))}
           </div>
@@ -123,7 +146,8 @@ export function WorkoutLogger({ dayId, dayTitle, items }: { dayId: string; dayTi
             )}
           </div>
         </section>
-      ))}
+        );
+      })}
 
       <section className="card p-4">
         <label className="label">Session notes <span className="text-fg-muted font-normal">(optional)</span></label>

@@ -1,6 +1,6 @@
 import "server-only";
 import { eq, and, asc, desc } from "drizzle-orm";
-import { db, assignments, programs, programDays, programExercises, exercises, workoutLogs } from "@/db";
+import { db, assignments, programs, programDays, programExercises, exercises, workoutLogs, setLogs } from "@/db";
 
 /** The client's active program + its (weekly) days. Null if none assigned. */
 export async function getActiveProgram(clientId: string) {
@@ -40,6 +40,33 @@ export async function getDayWithExercises(dayId: string) {
     .where(eq(programExercises.programDayId, dayId))
     .orderBy(asc(programExercises.orderIndex));
   return { day, items };
+}
+
+/**
+ * The client's most recent logged session for a given day (they repeat weekly),
+ * so the logger can show "last time" per exercise. Keyed by exerciseId.
+ */
+export async function lastSessionForDay(clientId: string, dayId: string) {
+  const [prev] = await db
+    .select({ id: workoutLogs.id, performedOn: workoutLogs.performedOn })
+    .from(workoutLogs)
+    .where(and(eq(workoutLogs.clientId, clientId), eq(workoutLogs.programDayId, dayId)))
+    .orderBy(desc(workoutLogs.performedOn), desc(workoutLogs.createdAt))
+    .limit(1);
+  if (!prev) return null;
+
+  const rows = await db
+    .select()
+    .from(setLogs)
+    .where(eq(setLogs.workoutLogId, prev.id))
+    .orderBy(asc(setLogs.setNo));
+
+  const byExerciseId: Record<string, { setNo: number; weight: string | null; reps: number | null; rpe: string | null }[]> = {};
+  for (const r of rows) {
+    if (!r.exerciseId) continue;
+    (byExerciseId[r.exerciseId] ??= []).push({ setNo: r.setNo, weight: r.weight, reps: r.reps, rpe: r.rpe });
+  }
+  return { performedOn: prev.performedOn, byExerciseId };
 }
 
 /** OWNERSHIP: is this day part of THIS client's active program? */
