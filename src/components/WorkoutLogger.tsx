@@ -21,6 +21,9 @@ type PrevSet = { setNo: number; weight: string | null; reps: number | null; rpe:
 
 const blankSet = (): SetEntry => ({ weight: "", reps: "", rpe: "" });
 const isFilled = (s: SetEntry) => s.weight.trim() !== "" || s.reps.trim() !== "" || s.rpe.trim() !== "";
+// Set state: "empty" (nothing), "partial" (started), "done" (weight + reps logged).
+const setStatus = (s: SetEntry): "empty" | "partial" | "done" =>
+  s.weight.trim() !== "" && s.reps.trim() !== "" ? "done" : isFilled(s) ? "partial" : "empty";
 const fmtPrev = (s: PrevSet) => `${s.weight ?? "—"}${s.reps != null ? `×${s.reps}` : ""}${s.rpe ? ` @${s.rpe}` : ""}`;
 
 function prescription(sets: number | null, reps: string | null, rpe: string | null): string | null {
@@ -278,13 +281,18 @@ function ExerciseCard({
         </div>
         <div className="mt-1.5 space-y-1.5">
           {entries.map((s, idx) => {
-            const done = isFilled(s);
+            const status = setStatus(s);
+            const ring =
+              status === "done"
+                ? "border-brand/70 text-fg font-medium"
+                : status === "partial"
+                  ? "border-fg-muted/60 text-fg"
+                  : "border-line text-fg-muted";
             return (
               <div key={idx} className="grid grid-cols-[1.75rem_1fr_1fr_1fr] gap-2 items-center">
                 <span
-                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs tabular-nums transition-colors ${
-                    done ? "border border-brand/60 text-fg font-medium" : "border border-line text-fg-muted"
-                  }`}
+                  className={`flex h-7 w-7 items-center justify-center rounded-full border text-xs tabular-nums transition-colors ${ring}`}
+                  aria-label={`Set ${idx + 1}${status === "done" ? " logged" : status === "partial" ? " in progress" : ""}`}
                 >
                   {idx + 1}
                 </span>
