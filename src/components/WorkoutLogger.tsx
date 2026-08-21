@@ -53,6 +53,15 @@ export function WorkoutLogger({ dayId, dayTitle, items }: { dayId: string; dayTi
     [items, sets],
   );
 
+  // A set "counts" once any of its fields is filled. Guards against empty logs.
+  const filledSets = useMemo(
+    () =>
+      Object.values(sets)
+        .flat()
+        .filter((s) => s.weight.trim() !== "" || s.reps.trim() !== "" || s.rpe.trim() !== "").length,
+    [sets],
+  );
+
   function update(itemId: string, idx: number, field: keyof SetEntry, value: string) {
     setSets((prev) => {
       const next = { ...prev };
@@ -124,10 +133,16 @@ export function WorkoutLogger({ dayId, dayTitle, items }: { dayId: string; dayTi
       {/* Sticky submit bar (thumb-reachable on mobile) */}
       <div className="fixed inset-x-0 bottom-0 border-t border-line bg-surface/95 backdrop-blur px-4 py-3">
         <div className="mx-auto max-w-lg flex items-center gap-3">
-          {state && (
-            <span className={`text-sm ${state.ok ? "text-emerald-500" : "text-red-500"}`}>{state.message}</span>
+          {state && !state.ok ? (
+            <span className="text-sm text-red-500">{state.message}</span>
+          ) : state?.ok ? (
+            <span className="text-sm text-emerald-500">{state.message}</span>
+          ) : filledSets === 0 ? (
+            <span className="text-sm text-fg-muted">Enter at least one set</span>
+          ) : (
+            <span className="text-sm text-fg-muted tabular-nums">{filledSets} set{filledSets === 1 ? "" : "s"}</span>
           )}
-          <button disabled={pending || state?.ok} className="btn btn-primary flex-1">
+          <button disabled={pending || state?.ok || filledSets === 0} className="btn btn-primary flex-1">
             {pending ? "Saving…" : state?.ok ? "Logged ✓" : `Complete ${dayTitle}`}
           </button>
         </div>

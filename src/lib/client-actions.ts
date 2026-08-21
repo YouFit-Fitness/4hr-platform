@@ -39,6 +39,15 @@ export async function logWorkout(
   const parsed = payloadSchema.safeParse(safeJson(formData.get("payload")));
   if (!parsed.success) return { ok: false, message: "Couldn't read your entries. Please try again." };
 
+  // Build the filled sets first — a workout with no logged sets is not saved.
+  const filled = parsed.data.map((ex) => ({
+    ...ex,
+    sets: ex.sets.filter((s) => (s.weight && s.weight.length) || s.reps != null || (s.rpe && s.rpe.length)),
+  }));
+  if (!filled.some((ex) => ex.sets.length > 0)) {
+    return { ok: false, message: "Log at least one set before completing." };
+  }
+
   const day = await getDayWithExercises(dayId);
   const notes = String(formData.get("notes") ?? "").trim().slice(0, 2000);
   const performedOn =
@@ -56,21 +65,18 @@ export async function logWorkout(
     })
     .returning({ id: workoutLogs.id });
 
-  const rows = parsed.data.flatMap((ex) =>
-    ex.sets
-      // keep only sets the client actually filled in
-      .filter((s) => (s.weight && s.weight.length) || s.reps != null || (s.rpe && s.rpe.length))
-      .map((s, i) => ({
-        workoutLogId: log.id,
-        exerciseId: ex.exerciseId ?? null,
-        exerciseName: ex.exerciseName,
-        setNo: i + 1,
-        weight: s.weight || null,
-        reps: s.reps ?? null,
-        rpe: s.rpe || null,
-      })),
+  const rows = filled.flatMap((ex) =>
+    ex.sets.map((s, i) => ({
+      workoutLogId: log.id,
+      exerciseId: ex.exerciseId ?? null,
+      exerciseName: ex.exerciseName,
+      setNo: i + 1,
+      weight: s.weight || null,
+      reps: s.reps ?? null,
+      rpe: s.rpe || null,
+    })),
   );
-  if (rows.length) await db.insert(setLogs).values(rows);
+  await db.insert(setLogs).values(rows);
 
   revalidatePath("/train");
   return { ok: true, message: "Workout logged. Great work." };
