@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
-import { eq, inArray, asc, desc } from "drizzle-orm";
+import { eq, inArray, asc } from "drizzle-orm";
 import { db, programs, programDays, programExercises, exercises } from "@/db";
 import { requireCoach } from "@/lib/auth";
-import { addProgramDay, addExerciseToDay } from "@/lib/training";
+import { addProgramDay } from "@/lib/training";
 import { CoachHeader } from "@/components/CoachHeader";
-import { DeleteDayButton, RemoveProgramExerciseButton } from "@/components/TrainingButtons";
+import { DeleteDayButton, RemoveProgramExerciseButton, MoveExerciseButtons } from "@/components/TrainingButtons";
 import { DeleteProgramButton } from "@/components/DeleteProgramButton";
+import { AddExerciseToDay } from "@/components/AddExerciseToDay";
 
 export default async function ProgramBuilder({ params }: { params: Promise<{ id: string }> }) {
   await requireCoach();
@@ -16,7 +17,10 @@ export default async function ProgramBuilder({ params }: { params: Promise<{ id:
 
   const days = await db.select().from(programDays).where(eq(programDays.programId, id)).orderBy(asc(programDays.orderIndex));
   const dayIds = days.map((d) => d.id);
-  const library = await db.select().from(exercises).orderBy(desc(exercises.createdAt));
+  const library = await db
+    .select({ id: exercises.id, name: exercises.name, muscleGroup: exercises.muscleGroup })
+    .from(exercises)
+    .orderBy(asc(exercises.name));
 
   const pes = dayIds.length
     ? await db
@@ -65,17 +69,20 @@ export default async function ProgramBuilder({ params }: { params: Promise<{ id:
               </div>
 
               <ul className="mt-3 space-y-2">
-                {items.map((it) => (
+                {items.map((it, i) => (
                   <li key={it.id} className="flex items-center justify-between gap-3 border-b border-line/50 pb-2">
-                    <div className="text-sm">
-                      <span className="font-medium">{it.exerciseName}</span>
-                      <span className="text-fg-muted">
-                        {" · "}
-                        {it.targetSets ?? "?"}×{it.targetReps ?? "?"}
-                        {it.targetRpe ? ` @RPE ${it.targetRpe}` : ""}
-                        {it.restSeconds ? ` · ${it.restSeconds}s rest` : ""}
-                      </span>
-                      {it.notes && <p className="text-xs text-fg-muted">{it.notes}</p>}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <MoveExerciseButtons id={it.id} programId={id} isFirst={i === 0} isLast={i === items.length - 1} />
+                      <div className="text-sm min-w-0">
+                        <span className="font-medium">{it.exerciseName}</span>
+                        <span className="text-fg-muted">
+                          {" · "}
+                          {it.targetSets ?? "?"}×{it.targetReps ?? "?"}
+                          {it.targetRpe ? ` @RPE ${it.targetRpe}` : ""}
+                          {it.restSeconds ? ` · ${it.restSeconds}s rest` : ""}
+                        </span>
+                        {it.notes && <p className="text-xs text-fg-muted">{it.notes}</p>}
+                      </div>
                     </div>
                     <RemoveProgramExerciseButton id={it.id} programId={id} />
                   </li>
@@ -83,25 +90,10 @@ export default async function ProgramBuilder({ params }: { params: Promise<{ id:
                 {items.length === 0 && <li className="text-sm text-fg-muted">No exercises yet.</li>}
               </ul>
 
-              {/* Add exercise to this day */}
-              <form action={addExerciseToDay.bind(null, id)} className="mt-4 grid grid-cols-2 sm:grid-cols-6 gap-2 items-end">
-                <input type="hidden" name="dayId" value={day.id} />
-                <div className="col-span-2 sm:col-span-2">
-                  <label className="label text-xs">Exercise</label>
-                  <select name="exerciseId" required defaultValue="" className="input">
-                    <option value="" disabled>Choose…</option>
-                    {library.map((e) => (
-                      <option key={e.id} value={e.id}>{e.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div><label className="label text-xs">Sets</label><input name="targetSets" inputMode="numeric" className="input" /></div>
-                <div><label className="label text-xs">Reps</label><input name="targetReps" placeholder="8–12" className="input" /></div>
-                <div><label className="label text-xs">RPE</label><input name="targetRpe" className="input" /></div>
-                <div><button className="btn btn-ghost text-sm w-full">Add</button></div>
-              </form>
-              {library.length === 0 && (
+              {library.length === 0 ? (
                 <p className="mt-2 text-xs text-amber-500">Add exercises to your library first (Exercises tab).</p>
+              ) : (
+                <AddExerciseToDay programId={id} dayId={day.id} library={library} />
               )}
             </section>
           );

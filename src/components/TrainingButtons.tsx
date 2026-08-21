@@ -1,4 +1,4 @@
-import { deleteExercise, deleteProgramDay, removeProgramExercise } from "@/lib/training";
+import { deleteExercise, deleteProgramDay, removeProgramExercise, moveProgramExercise } from "@/lib/training";
 
 /** Small delete controls that submit bound server actions (server-safe forms). */
 
@@ -21,7 +21,22 @@ export function DeleteDayButton({ dayId, programId }: { dayId: string; programId
 export function RemoveProgramExerciseButton({ id, programId }: { id: string; programId: string }) {
   return (
     <form action={removeProgramExercise.bind(null, id, programId)}>
-      <button className="text-xs text-fg-muted hover:text-red-500 transition-colors">✕</button>
+      <button className="text-xs text-fg-muted hover:text-red-500 transition-colors" aria-label="Remove exercise">✕</button>
     </form>
+  );
+}
+
+/** Move an exercise up/down within its day. */
+export function MoveExerciseButtons({ id, programId, isFirst, isLast }: { id: string; programId: string; isFirst: boolean; isLast: boolean }) {
+  const cls = "flex h-6 w-6 items-center justify-center rounded border border-line text-xs text-fg-muted hover:text-fg hover:border-fg-muted disabled:opacity-30";
+  return (
+    <div className="flex items-center gap-1">
+      <form action={moveProgramExercise.bind(null, id, programId, "up")}>
+        <button className={cls} disabled={isFirst} aria-label="Move up">↑</button>
+      </form>
+      <form action={moveProgramExercise.bind(null, id, programId, "down")}>
+        <button className={cls} disabled={isLast} aria-label="Move down">↓</button>
+      </form>
+    </div>
   );
 }

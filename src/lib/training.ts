@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 import { z } from "zod";
 import { db, exercises, programs, programDays, programExercises, assignments } from "@/db";
 import { requireCoach } from "@/lib/auth";
@@ -69,15 +69,20 @@ export async function deleteProgramDay(dayId: string, programId: string): Promis
   revalidatePath(`/coach/programs/${programId}`);
 }
 
-export async function addExerciseToDay(programId: string, formData: FormData): Promise<void> {
+/** Add a master exercise (by reference) to a day, with a client-specific prescription. */
+export async function addExerciseToProgramDay(
+  programId: string,
+  _prev: unknown,
+  formData: FormData,
+): Promise<{ ok: boolean; message: string }> {
   await requireCoach();
   const dayId = String(formData.get("dayId") ?? "");
   const exerciseId = String(formData.get("exerciseId") ?? "");
-  if (!dayId || !exerciseId) return;
-  const existing = await db.select().from(programExercises).where(eq(programExercises.programDayId, dayId));
+  if (!dayId || !exerciseId) return { ok: false, message: "Choose an exercise first." };
+  const existing = await db.select({ id: programExercises.id }).from(programExercises).where(eq(programExercises.programDayId, dayId));
   await db.insert(programExercises).values({
     programDayId: dayId,
-    exerciseId,
+    exerciseId, // references the master exercise — never copies it
     orderIndex: existing.length,
     targetSets: num(formData.get("targetSets")),
     targetReps: str(formData.get("targetReps"), 20) || null,
@@ -86,11 +91,31 @@ export async function addExerciseToDay(programId: string, formData: FormData): P
     notes: str(formData.get("notes"), 300),
   });
   revalidatePath(`/coach/programs/${programId}`);
+  return { ok: true, message: "Added." };
 }
 
 export async function removeProgramExercise(id: string, programId: string): Promise<void> {
   await requireCoach();
   await db.delete(programExercises).where(eq(programExercises.id, id));
+  revalidatePath(`/coach/programs/${programId}`);
+}
+
+/** Reorder an exercise within its day by swapping orderIndex with a neighbour. */
+export async function moveProgramExercise(id: string, programId: string, dir: "up" | "down"): Promise<void> {
+  await requireCoach();
+  const [me] = await db.select().from(programExercises).where(eq(programExercises.id, id)).limit(1);
+  if (!me) return;
+  const siblings = await db
+    .select()
+    .from(programExercises)
+    .where(eq(programExercises.programDayId, me.programDayId))
+    .orderBy(asc(programExercises.orderIndex));
+  const idx = siblings.findIndex((s) => s.id === id);
+  const swapIdx = dir === "up" ? idx - 1 : idx + 1;
+  if (swapIdx < 0 || swapIdx >= siblings.length) return;
+  const other = siblings[swapIdx];
+  await db.update(programExercises).set({ orderIndex: other.orderIndex }).where(eq(programExercises.id, me.id));
+  await db.update(programExercises).set({ orderIndex: me.orderIndex }).where(eq(programExercises.id, other.id));
   revalidatePath(`/coach/programs/${programId}`);
 }
 
