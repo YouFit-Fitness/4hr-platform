@@ -1,4 +1,5 @@
 "use server";
+import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { clerkClient } from "@clerk/nextjs/server";
@@ -16,6 +17,11 @@ async function appOrigin(): Promise<string> {
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? (host.includes("localhost") ? "http" : "https");
   return `${proto}://${host}`;
+}
+
+const newShortCode = () => randomBytes(6).toString("base64url"); // ~8 url-safe chars
+async function shortLink(code: string): Promise<string> {
+  return `${await appOrigin()}/i/${code}`;
 }
 
 /** COACH: invite a client — creates a Clerk invitation + a client record (INVITED). */
@@ -41,27 +47,37 @@ export async function inviteClient(_prev: unknown, formData: FormData): Promise<
     return { ok: false, message: "Could not send the invitation. Please try again." };
   }
 
-  await db.insert(clients).values({ email: email.data, status: "INVITED", inviteUrl: inviteUrl ?? null });
+  const code = newShortCode();
+  await db.insert(clients).values({ email: email.data, status: "INVITED", inviteUrl: inviteUrl ?? null, inviteCode: code });
   revalidatePath("/coach");
-  return { ok: true, message: `Invitation sent to ${email.data}.`, inviteUrl };
+  return { ok: true, message: `Invitation sent to ${email.data}.`, inviteUrl: await shortLink(code) };
 }
 
-/** COACH: get a shareable sign-up link for an invited client (creates one if missing). */
+/** COACH: get a short, branded sign-up link for an invited client (creates one if missing). */
 export async function getInviteLink(clientId: string): Promise<{ ok: boolean; url?: string; message?: string }> {
   await requireCoach();
   const [c] = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
   if (!c) return { ok: false, message: "Client not found." };
-  if (c.inviteUrl) return { ok: true, url: c.inviteUrl };
+
+  let rawUrl = c.inviteUrl;
+  let code = c.inviteCode;
   try {
-    const cc = await clerkClient();
-    const inv = await cc.invitations.createInvitation({
-      emailAddress: c.email,
-      redirectUrl: `${await appOrigin()}/sign-up`,
-      ignoreExisting: true,
-    });
-    await db.update(clients).set({ inviteUrl: inv.url ?? null }).where(eq(clients.id, clientId));
-    revalidatePath(`/coach/clients/${clientId}`);
-    return { ok: true, url: inv.url ?? undefined };
+    if (!rawUrl) {
+      const cc = await clerkClient();
+      const inv = await cc.invitations.createInvitation({
+        emailAddress: c.email,
+        redirectUrl: `${await appOrigin()}/sign-up`,
+        ignoreExisting: true,
+      });
+      rawUrl = inv.url ?? null;
+    }
+    if (!code) code = newShortCode();
+    if (rawUrl !== c.inviteUrl || code !== c.inviteCode) {
+      await db.update(clients).set({ inviteUrl: rawUrl, inviteCode: code }).where(eq(clients.id, clientId));
+      revalidatePath(`/coach/clients/${clientId}`);
+    }
+    if (!rawUrl) return { ok: false, message: "Could not generate a link. Please try again." };
+    return { ok: true, url: await shortLink(code) };
   } catch (err) {
     console.error("[getInviteLink] clerk invitation failed:", err instanceof Error ? err.message : err);
     return { ok: false, message: "Could not generate a link. Please try again." };

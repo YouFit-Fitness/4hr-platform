@@ -42,6 +42,7 @@ export const clients = pgTable("clients", {
   email: text("email").notNull().unique(),
   status: clientStatusEnum("status").notNull().default("INVITED"),
   inviteUrl: text("invite_url"), // Clerk invitation link — coach can share it directly (e.g. WhatsApp)
+  inviteCode: text("invite_code").unique(), // short code for a branded /i/<code> redirect
   sourceLeadEmail: text("source_lead_email"), // optional link back to a marketing lead
   startDate: date("start_date"),
   endDate: date("end_date"),
