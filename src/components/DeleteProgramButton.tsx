@@ -1,15 +1,9 @@
 "use client";
-import { useActionState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState } from "react";
 import { deleteProgram } from "@/lib/training";
 
 export function DeleteProgramButton({ programId }: { programId: string }) {
-  const router = useRouter();
   const [state, action, pending] = useActionState(deleteProgram, null as null | { ok: boolean; message: string });
-
-  useEffect(() => {
-    if (state?.ok) router.push("/coach/programs");
-  }, [state, router]);
 
   return (
     <form

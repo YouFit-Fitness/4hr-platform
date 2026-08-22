@@ -50,7 +50,8 @@ export function ExerciseBrowser({ exercises }: { exercises: Exercise[] }) {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search exercises…"
-            className="input w-full pl-11 py-3 text-base"
+            className="input w-full"
+            style={{ paddingLeft: "2.85rem", paddingTop: "0.8rem", paddingBottom: "0.8rem" }}
             aria-label="Search exercises by name"
           />
         </div>

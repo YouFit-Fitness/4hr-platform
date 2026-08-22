@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { eq, and, asc } from "drizzle-orm";
 import { z } from "zod";
 import { db, exercises, programs, programDays, programExercises, assignments } from "@/db";
@@ -80,7 +81,8 @@ export async function deleteProgram(_prev: unknown, formData: FormData): Promise
   }
   await db.delete(programs).where(eq(programs.id, id));
   revalidatePath("/coach/programs");
-  return { ok: true, message: "Program deleted." };
+  // Navigate away from the (now-deleted) builder page so it doesn't 404.
+  redirect("/coach/programs");
 }
 
 /** Deep-copy a program (days + prescriptions). Returns the new program id. */
