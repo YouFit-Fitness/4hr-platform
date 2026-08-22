@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { desc } from "drizzle-orm";
-import { db, clients } from "@/db";
+import { desc, max } from "drizzle-orm";
+import { db, clients, workoutLogs } from "@/db";
 import { requireCoach, isCoachEmailConfigured } from "@/lib/auth";
 import { InviteForm } from "@/components/InviteForm";
 import { CoachHeader } from "@/components/CoachHeader";
@@ -11,10 +11,39 @@ const STATUS_LABEL: Record<string, string> = {
   ACTIVE: "Active", PAUSED: "Paused", COMPLETED: "Completed",
 };
 
+function daysAgo(d: string): number {
+  return Math.floor((Date.now() - new Date(d.slice(0, 10) + "T00:00:00").getTime()) / 864e5);
+}
+function relLabel(days: number): string {
+  return days <= 0 ? "today" : days === 1 ? "yesterday" : `${days}d ago`;
+}
+
 export default async function CoachHome() {
   await requireCoach();
   const all = await db.select().from(clients).orderBy(desc(clients.updatedAt));
   const byStatus = (s: string) => all.filter((c) => c.status === s);
+
+  // Most recent training date per client (for the "who needs attention" cue).
+  const lastRows = await db
+    .select({ clientId: workoutLogs.clientId, last: max(workoutLogs.performedOn) })
+    .from(workoutLogs)
+    .groupBy(workoutLogs.clientId);
+  const lastTrained = new Map(lastRows.map((r) => [r.clientId, r.last as string | null]));
+
+  function rightMeta(c: (typeof all)[number]) {
+    if (c.status === "ACTIVE") {
+      const last = lastTrained.get(c.id);
+      if (!last) return <span className="text-xs text-fg-muted whitespace-nowrap">No workouts yet</span>;
+      const d = daysAgo(last);
+      const quiet = d >= 5;
+      return (
+        <span className={`text-xs whitespace-nowrap ${quiet ? "text-amber-500" : "text-fg-muted"}`}>
+          Trained {relLabel(d)}{quiet ? " · quiet" : ""}
+        </span>
+      );
+    }
+    return <span className="text-xs text-fg-muted whitespace-nowrap">{new Date(c.updatedAt).toLocaleDateString()}</span>;
+  }
 
   return (
     <div className="min-h-dvh">
@@ -53,10 +82,8 @@ export default async function CoachHome() {
                       href={`/coach/clients/${c.id}`}
                       className="card card p-4 flex items-center justify-between hover:border-fg-muted transition-colors"
                     >
-                      <span className="font-medium">{c.email}</span>
-                      <span className="text-xs text-fg-muted">
-                        {new Date(c.updatedAt).toLocaleDateString()}
-                      </span>
+                      <span className="font-medium truncate">{c.email}</span>
+                      {rightMeta(c)}
                     </Link>
                   ))}
                 </div>

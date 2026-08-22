@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { logWorkout } from "@/lib/client-actions";
 
 type Item = {
@@ -26,6 +26,7 @@ const isFilled = (s: SetEntry) => s.weight.trim() !== "" || s.reps.trim() !== ""
 const setStatus = (s: SetEntry): "empty" | "partial" | "done" =>
   s.weight.trim() !== "" && s.reps.trim() !== "" ? "done" : isFilled(s) ? "partial" : "empty";
 const fmtPrev = (s: PrevSet) => `${s.weight ?? "—"}${s.reps != null ? `×${s.reps}` : ""}${s.rpe ? ` @${s.rpe}` : ""}`;
+const fmtClock = (sec: number) => `${Math.floor(Math.max(0, sec) / 60)}:${String(Math.max(0, sec) % 60).padStart(2, "0")}`;
 
 function prescription(sets: number | null, reps: string | null, rpe: string | null): string | null {
   let main = "";
@@ -123,6 +124,26 @@ export function WorkoutLogger({
       return arr.length <= 1 ? p : { ...p, [itemId]: arr.slice(0, -1) };
     });
 
+  // ── Rest timer (client-only; uses each exercise's prescribed rest, else 90s) ─
+  const [restLeft, setRestLeft] = useState<number | null>(null);
+  const restEnd = useRef(0);
+  const startRest = useCallback((seconds: number) => {
+    restEnd.current = Date.now() + seconds * 1000;
+    setRestLeft(seconds);
+  }, []);
+  const addRest = (s: number) => { restEnd.current += s * 1000; setRestLeft((p) => (p ?? 0) + s); };
+  const skipRest = () => setRestLeft(null);
+  useEffect(() => {
+    if (restLeft === null) return;
+    if (restLeft <= 0) {
+      if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate([120, 60, 120]);
+      const t = setTimeout(() => setRestLeft(null), 2000);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(() => setRestLeft(Math.max(0, Math.round((restEnd.current - Date.now()) / 1000))), 500);
+    return () => clearTimeout(t);
+  }, [restLeft]);
+
   // ── Completion confirmation ───────────────────────────────────────────────
   if (state?.ok) {
     const today = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -172,6 +193,7 @@ export function WorkoutLogger({
             onUpdate={update}
             onAddSet={addSet}
             onRemoveSet={removeSet}
+            onStartRest={startRest}
           />
         ))}
       </div>
@@ -181,6 +203,20 @@ export function WorkoutLogger({
         <label htmlFor="notes" className="text-sm font-medium">Session notes <span className="text-fg-muted font-normal">(optional)</span></label>
         <textarea id="notes" name="notes" rows={2} className="input resize-y mt-2 text-sm" placeholder="How did it feel? Any pain, PRs, substitutions…" />
       </section>
+
+      {/* Rest timer chip — floats just above the completion bar */}
+      {restLeft !== null && (
+        <div className="fixed inset-x-0 z-10 px-4" style={{ bottom: "calc(4.25rem + env(safe-area-inset-bottom))" }}>
+          <div className={`mx-auto max-w-xl flex items-center gap-3 rounded-xl border bg-surface/95 backdrop-blur px-4 py-2.5 shadow-lg ${restLeft <= 0 ? "border-brand" : "border-brand/40"}`}>
+            <span className="text-sm font-medium">{restLeft > 0 ? "Rest" : "Rest done"}</span>
+            <span className="text-lg font-bold tabular-nums text-brand" aria-live="polite">{fmtClock(restLeft)}</span>
+            <div className="ml-auto flex gap-2">
+              <button type="button" onClick={() => addRest(15)} className="btn btn-ghost text-xs px-3">+15s</button>
+              <button type="button" onClick={skipRest} className="btn btn-ghost text-xs px-3">{restLeft <= 0 ? "Dismiss" : "Skip"}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sticky completion bar (safe-area aware) */}
       <div
@@ -217,6 +253,7 @@ function ExerciseCard({
   onUpdate,
   onAddSet,
   onRemoveSet,
+  onStartRest,
 }: {
   item: Item;
   index: number;
@@ -227,6 +264,7 @@ function ExerciseCard({
   onUpdate: (itemId: string, idx: number, field: keyof SetEntry, value: string) => void;
   onAddSet: (itemId: string) => void;
   onRemoveSet: (itemId: string) => void;
+  onStartRest: (seconds: number) => void;
 }) {
   const rx = prescription(item.targetSets, item.targetReps, item.targetRpe);
   const rest = fmtRest(item.restSeconds);
@@ -312,13 +350,20 @@ function ExerciseCard({
           })}
         </div>
 
-        {/* Add / remove — low hierarchy, remove is subtle */}
-        <div className="mt-2.5 flex items-center justify-between">
+        {/* Rest timer + add/remove — remove stays subtle */}
+        <div className="mt-2.5 flex items-center gap-4">
+          <button type="button" onClick={() => onStartRest(item.restSeconds ?? 90)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-xs hover:border-brand hover:text-brand transition-colors">
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <circle cx="12" cy="13" r="8" /><path d="M12 13V9M12 2h0M9 2h6" strokeLinecap="round" />
+            </svg>
+            Rest {item.restSeconds ?? 90}s
+          </button>
           <button type="button" onClick={() => onAddSet(item.id)}
             className="text-xs font-medium text-brand hover:underline">+ Add set</button>
           {entries.length > 1 && (
             <button type="button" onClick={() => onRemoveSet(item.id)}
-              className="text-xs text-fg-muted hover:text-fg">Remove last</button>
+              className="ml-auto text-xs text-fg-muted hover:text-fg">Remove last</button>
           )}
         </div>
       </div>
