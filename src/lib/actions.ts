@@ -19,7 +19,7 @@ async function appOrigin(): Promise<string> {
 }
 
 /** COACH: invite a client — creates a Clerk invitation + a client record (INVITED). */
-export async function inviteClient(_prev: unknown, formData: FormData): Promise<{ ok: boolean; message: string }> {
+export async function inviteClient(_prev: unknown, formData: FormData): Promise<{ ok: boolean; message: string; inviteUrl?: string }> {
   await requireCoach();
   const email = z.string().trim().toLowerCase().email().safeParse(formData.get("email"));
   if (!email.success) return { ok: false, message: "Enter a valid email address." };
@@ -27,21 +27,45 @@ export async function inviteClient(_prev: unknown, formData: FormData): Promise<
   const existing = await db.select().from(clients).where(eq(clients.email, email.data)).limit(1);
   if (existing[0]) return { ok: false, message: "A client with that email already exists." };
 
+  let inviteUrl: string | undefined;
   try {
     const cc = await clerkClient();
-    await cc.invitations.createInvitation({
+    const inv = await cc.invitations.createInvitation({
       emailAddress: email.data,
       redirectUrl: `${await appOrigin()}/sign-up`,
       ignoreExisting: true,
     });
+    inviteUrl = inv.url ?? undefined;
   } catch (err) {
     console.error("[invite] clerk invitation failed:", err instanceof Error ? err.message : err);
     return { ok: false, message: "Could not send the invitation. Please try again." };
   }
 
-  await db.insert(clients).values({ email: email.data, status: "INVITED" });
+  await db.insert(clients).values({ email: email.data, status: "INVITED", inviteUrl: inviteUrl ?? null });
   revalidatePath("/coach");
-  return { ok: true, message: `Invitation sent to ${email.data}.` };
+  return { ok: true, message: `Invitation sent to ${email.data}.`, inviteUrl };
+}
+
+/** COACH: get a shareable sign-up link for an invited client (creates one if missing). */
+export async function getInviteLink(clientId: string): Promise<{ ok: boolean; url?: string; message?: string }> {
+  await requireCoach();
+  const [c] = await db.select().from(clients).where(eq(clients.id, clientId)).limit(1);
+  if (!c) return { ok: false, message: "Client not found." };
+  if (c.inviteUrl) return { ok: true, url: c.inviteUrl };
+  try {
+    const cc = await clerkClient();
+    const inv = await cc.invitations.createInvitation({
+      emailAddress: c.email,
+      redirectUrl: `${await appOrigin()}/sign-up`,
+      ignoreExisting: true,
+    });
+    await db.update(clients).set({ inviteUrl: inv.url ?? null }).where(eq(clients.id, clientId));
+    revalidatePath(`/coach/clients/${clientId}`);
+    return { ok: true, url: inv.url ?? undefined };
+  } catch (err) {
+    console.error("[getInviteLink] clerk invitation failed:", err instanceof Error ? err.message : err);
+    return { ok: false, message: "Could not generate a link. Please try again." };
+  }
 }
 
 /** CLIENT: submit the onboarding questionnaire (own record only) → PLAN_SETUP. */

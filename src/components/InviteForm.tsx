@@ -1,10 +1,11 @@
 "use client";
 import { useActionState, useEffect, useRef } from "react";
 import { inviteClient } from "@/lib/actions";
+import { CopyLinkButton } from "@/components/InviteLink";
 
 export function InviteForm() {
   const formRef = useRef<HTMLFormElement>(null);
-  const [state, action, pending] = useActionState(inviteClient, null as null | { ok: boolean; message: string });
+  const [state, action, pending] = useActionState(inviteClient, null as null | { ok: boolean; message: string; inviteUrl?: string });
 
   useEffect(() => {
     if (state?.ok) formRef.current?.reset();
@@ -21,6 +22,12 @@ export function InviteForm() {
       </div>
       {state && (
         <p className={`mt-2 text-xs ${state.ok ? "text-brand" : "text-red-500"}`}>{state.message}</p>
+      )}
+      {state?.ok && state.inviteUrl && (
+        <div className="mt-2 flex items-center gap-2">
+          <p className="flex-1 text-xs text-fg-muted">Emails can land in spam — send this link directly instead:</p>
+          <CopyLinkButton url={state.inviteUrl} />
+        </div>
       )}
     </form>
   );

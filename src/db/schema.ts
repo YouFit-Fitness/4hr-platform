@@ -41,6 +41,7 @@ export const clients = pgTable("clients", {
   userId: uuid("user_id").references(() => users.id), // null until they activate
   email: text("email").notNull().unique(),
   status: clientStatusEnum("status").notNull().default("INVITED"),
+  inviteUrl: text("invite_url"), // Clerk invitation link — coach can share it directly (e.g. WhatsApp)
   sourceLeadEmail: text("source_lead_email"), // optional link back to a marketing lead
   startDate: date("start_date"),
   endDate: date("end_date"),

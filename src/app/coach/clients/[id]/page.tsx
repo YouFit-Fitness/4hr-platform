@@ -6,6 +6,7 @@ import { requireCoach } from "@/lib/auth";
 import { updateCoachNotes, setClientStatus, setClientDates } from "@/lib/actions";
 import { assignProgram } from "@/lib/training";
 import { onboardingSections } from "@/lib/onboarding";
+import { ClientInviteLinkButton } from "@/components/InviteLink";
 
 const LABELS: Record<string, string> = Object.fromEntries(
   onboardingSections.flatMap((s) => s.fields.map((f) => [f.key, f.label])),
@@ -80,6 +81,19 @@ export default async function ClientDetail({ params }: { params: Promise<{ id: s
             {client.endDate && <> · End {client.endDate}</>}
           </p>
         </div>
+
+        {/* Invite link — for clients who haven't signed up yet */}
+        {client.status === "INVITED" && (
+          <section className="card p-5">
+            <h2 className="font-semibold">Invitation</h2>
+            <p className="mt-1 text-sm text-fg-muted">
+              This client hasn&apos;t signed up yet. Invitation emails can land in spam — copy the link and send it directly (e.g. WhatsApp).
+            </p>
+            <div className="mt-3">
+              <ClientInviteLinkButton clientId={client.id} />
+            </div>
+          </section>
+        )}
 
         {/* Lifecycle actions */}
         <section className="card p-5">
