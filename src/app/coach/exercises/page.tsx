@@ -13,6 +13,7 @@ export default async function ExerciseLibrary() {
       name: exercises.name,
       muscleGroup: exercises.muscleGroup,
       equipment: exercises.equipment,
+      movementCategory: exercises.movementCategory,
       videoUrl: exercises.videoUrl,
       cues: exercises.cues,
       archived: exercises.archived,

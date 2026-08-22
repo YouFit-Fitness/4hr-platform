@@ -1,12 +1,14 @@
 "use client";
 import { useMemo, useState } from "react";
 import { DeleteExerciseButton, ArchiveExerciseButton } from "@/components/TrainingButtons";
+import { EditExerciseForm } from "@/components/EditExerciseForm";
 
 type Exercise = {
   id: string;
   name: string;
   muscleGroup: string | null;
   equipment: string | null;
+  movementCategory: string | null;
   videoUrl: string | null;
   cues: string | null;
   archived: boolean;
@@ -17,6 +19,7 @@ export function ExerciseBrowser({ exercises }: { exercises: Exercise[] }) {
   const [muscle, setMuscle] = useState("");
   const [equipment, setEquipment] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const muscles = useMemo(() => uniq(exercises.map((e) => e.muscleGroup)), [exercises]);
   const equipments = useMemo(() => uniq(exercises.map((e) => e.equipment)), [exercises]);
@@ -60,24 +63,34 @@ export function ExerciseBrowser({ exercises }: { exercises: Exercise[] }) {
 
       <div className="mt-2 space-y-2">
         {filtered.map((e) => (
-          <div key={e.id} className="card p-4 flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="font-medium">{e.name}</p>
-              <p className="text-xs text-fg-muted mt-0.5">
-                {[e.muscleGroup, e.equipment].filter(Boolean).join(" · ") || "—"}
-                {e.videoUrl && (
-                  <>
-                    {" · "}
-                    <a href={e.videoUrl} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">demo video</a>
-                  </>
-                )}
-              </p>
-              {e.cues && <p className="text-xs text-fg-muted mt-1 whitespace-pre-line">{e.cues}</p>}
+          <div key={e.id} className="card p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-medium">{e.name}</p>
+                <p className="text-xs text-fg-muted mt-0.5">
+                  {[e.muscleGroup, e.equipment].filter(Boolean).join(" · ") || "—"}
+                  {e.videoUrl && (
+                    <>
+                      {" · "}
+                      <a href={e.videoUrl} target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">demo video</a>
+                    </>
+                  )}
+                </p>
+                {e.cues && <p className="text-xs text-fg-muted mt-1 whitespace-pre-line">{e.cues}</p>}
+              </div>
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setEditingId((cur) => (cur === e.id ? null : e.id))}
+                  className="text-xs text-fg-muted hover:text-fg transition-colors"
+                >
+                  {editingId === e.id ? "Close" : "Edit"}
+                </button>
+                <ArchiveExerciseButton id={e.id} archived={e.archived} />
+                <DeleteExerciseButton id={e.id} />
+              </div>
             </div>
-            <div className="flex flex-col items-end gap-1.5 shrink-0">
-              <ArchiveExerciseButton id={e.id} archived={e.archived} />
-              <DeleteExerciseButton id={e.id} />
-            </div>
+            {editingId === e.id && <EditExerciseForm exercise={e} onDone={() => setEditingId(null)} />}
           </div>
         ))}
         {filtered.length === 0 && <p className="text-fg-muted text-sm py-4">No exercises match your search.</p>}

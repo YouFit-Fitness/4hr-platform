@@ -35,6 +35,26 @@ export async function setExerciseArchived(id: string, archived: boolean): Promis
   revalidatePath("/coach/exercises");
 }
 
+/** Edit a master exercise's details in place (does not affect logged history). */
+export async function updateExercise(id: string, _prev: unknown, formData: FormData): Promise<{ ok: boolean; message: string }> {
+  await requireCoach();
+  const name = z.string().trim().min(1).max(120).safeParse(formData.get("name"));
+  if (!name.success) return { ok: false, message: "Exercise name is required." };
+  await db
+    .update(exercises)
+    .set({
+      name: name.data,
+      muscleGroup: str(formData.get("muscleGroup"), 60) || null,
+      equipment: str(formData.get("equipment"), 40) || null,
+      movementCategory: str(formData.get("movementCategory"), 40) || null,
+      videoUrl: str(formData.get("videoUrl"), 500) || null,
+      cues: str(formData.get("cues"), 1000) || null,
+    })
+    .where(eq(exercises.id, id));
+  revalidatePath("/coach/exercises");
+  return { ok: true, message: "Saved." };
+}
+
 // ── Programs ────────────────────────────────────────────────────────────────
 export async function createProgram(_prev: unknown, formData: FormData): Promise<{ ok: boolean; message: string; id?: string }> {
   await requireCoach();
@@ -152,6 +172,29 @@ export async function removeProgramExercise(id: string, programId: string): Prom
   await requireCoach();
   await db.delete(programExercises).where(eq(programExercises.id, id));
   revalidatePath(`/coach/programs/${programId}`);
+}
+
+/** Edit a client-specific prescription in place (the master exercise is untouched). */
+export async function updateProgramExercise(
+  id: string,
+  programId: string,
+  _prev: unknown,
+  formData: FormData,
+): Promise<{ ok: boolean; message: string }> {
+  await requireCoach();
+  await db
+    .update(programExercises)
+    .set({
+      targetSets: num(formData.get("targetSets")),
+      targetReps: str(formData.get("targetReps"), 20) || null,
+      targetRpe: str(formData.get("targetRpe"), 10) || null,
+      tempo: str(formData.get("tempo"), 20) || null,
+      restSeconds: num(formData.get("restSeconds")),
+      notes: str(formData.get("notes"), 300),
+    })
+    .where(eq(programExercises.id, id));
+  revalidatePath(`/coach/programs/${programId}`);
+  return { ok: true, message: "Saved." };
 }
 
 /** Reorder an exercise within its day by swapping orderIndex with a neighbour. */

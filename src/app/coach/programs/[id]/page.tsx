@@ -4,10 +4,11 @@ import { db, programs, programDays, programExercises, exercises } from "@/db";
 import { requireCoach } from "@/lib/auth";
 import { addProgramDay } from "@/lib/training";
 import { CoachHeader } from "@/components/CoachHeader";
-import { DeleteDayButton, RemoveProgramExerciseButton, MoveExerciseButtons } from "@/components/TrainingButtons";
+import { DeleteDayButton } from "@/components/TrainingButtons";
 import { DeleteProgramButton } from "@/components/DeleteProgramButton";
 import { AddExerciseToDay } from "@/components/AddExerciseToDay";
 import { DuplicateDayButton } from "@/components/DuplicateButtons";
+import { ProgramExerciseRow } from "@/components/ProgramExerciseRow";
 
 export default async function ProgramBuilder({ params }: { params: Promise<{ id: string }> }) {
   await requireCoach();
@@ -76,23 +77,7 @@ export default async function ProgramBuilder({ params }: { params: Promise<{ id:
 
               <ul className="mt-3 space-y-2">
                 {items.map((it, i) => (
-                  <li key={it.id} className="flex items-center justify-between gap-3 border-b border-line/50 pb-2">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <MoveExerciseButtons id={it.id} programId={id} isFirst={i === 0} isLast={i === items.length - 1} />
-                      <div className="text-sm min-w-0">
-                        <span className="font-medium">{it.exerciseName}</span>
-                        <span className="text-fg-muted">
-                          {" · "}
-                          {it.targetSets ?? "?"}×{it.targetReps ?? "?"}
-                          {it.targetRpe ? ` @RPE ${it.targetRpe}` : ""}
-                          {it.tempo ? ` · tempo ${it.tempo}` : ""}
-                          {it.restSeconds ? ` · ${it.restSeconds}s rest` : ""}
-                        </span>
-                        {it.notes && <p className="text-xs text-fg-muted">{it.notes}</p>}
-                      </div>
-                    </div>
-                    <RemoveProgramExerciseButton id={it.id} programId={id} />
-                  </li>
+                  <ProgramExerciseRow key={it.id} pe={it} programId={id} isFirst={i === 0} isLast={i === items.length - 1} />
                 ))}
                 {items.length === 0 && <li className="text-sm text-fg-muted">No exercises yet.</li>}
               </ul>
