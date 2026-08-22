@@ -41,16 +41,29 @@ export function ExerciseBrowser({ exercises }: { exercises: Exercise[] }) {
       <h1 className="text-2xl font-bold">Exercise library</h1>
       <p className="text-sm text-fg-muted mt-1">{active.length} exercises · reusable across programs</p>
 
-      <div className="mt-5 flex flex-col sm:flex-row gap-2">
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search exercises…" className="input flex-1" aria-label="Search exercises by name" />
-        <select value={muscle} onChange={(e) => setMuscle(e.target.value)} className="input sm:w-40" aria-label="Filter by muscle group">
-          <option value="">All muscles</option>
-          {muscles.map((m) => <option key={m} value={m}>{m}</option>)}
-        </select>
-        <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className="input sm:w-40" aria-label="Filter by equipment">
-          <option value="">All equipment</option>
-          {equipments.map((m) => <option key={m} value={m}>{m}</option>)}
-        </select>
+      <div className="mt-5 space-y-2">
+        <div className="relative">
+          <svg viewBox="0 0 24 24" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-5 w-5 text-fg-muted" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" strokeLinecap="round" />
+          </svg>
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search exercises…"
+            className="input w-full pl-11 py-3 text-base"
+            aria-label="Search exercises by name"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:max-w-md">
+          <select value={muscle} onChange={(e) => setMuscle(e.target.value)} className="input" aria-label="Filter by muscle group">
+            <option value="">All muscles</option>
+            {muscles.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+          <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className="input" aria-label="Filter by equipment">
+            <option value="">All equipment</option>
+            {equipments.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
       </div>
 
       <div className="mt-3 flex items-center justify-between">
