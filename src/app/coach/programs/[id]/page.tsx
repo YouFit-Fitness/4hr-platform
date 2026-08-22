@@ -7,6 +7,7 @@ import { CoachHeader } from "@/components/CoachHeader";
 import { DeleteDayButton, RemoveProgramExerciseButton, MoveExerciseButtons } from "@/components/TrainingButtons";
 import { DeleteProgramButton } from "@/components/DeleteProgramButton";
 import { AddExerciseToDay } from "@/components/AddExerciseToDay";
+import { DuplicateDayButton } from "@/components/DuplicateButtons";
 
 export default async function ProgramBuilder({ params }: { params: Promise<{ id: string }> }) {
   await requireCoach();
@@ -67,7 +68,10 @@ export default async function ProgramBuilder({ params }: { params: Promise<{ id:
             <section key={day.id} className="card p-5">
               <div className="flex items-center justify-between">
                 <h2 className="font-semibold">{day.title}</h2>
-                <DeleteDayButton dayId={day.id} programId={id} />
+                <div className="flex items-center gap-3">
+                  <DuplicateDayButton dayId={day.id} programId={id} />
+                  <DeleteDayButton dayId={day.id} programId={id} />
+                </div>
               </div>
 
               <ul className="mt-3 space-y-2">

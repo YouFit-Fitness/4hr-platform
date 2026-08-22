@@ -63,6 +63,50 @@ export async function deleteProgram(_prev: unknown, formData: FormData): Promise
   return { ok: true, message: "Program deleted." };
 }
 
+/** Deep-copy a program (days + prescriptions). Returns the new program id. */
+export async function duplicateProgram(programId: string): Promise<{ ok: boolean; id?: string }> {
+  await requireCoach();
+  const [p] = await db.select().from(programs).where(eq(programs.id, programId)).limit(1);
+  if (!p) return { ok: false };
+  const [np] = await db.insert(programs).values({ name: `${p.name} (copy)`, description: p.description }).returning({ id: programs.id });
+  const days = await db.select().from(programDays).where(eq(programDays.programId, programId)).orderBy(asc(programDays.orderIndex));
+  for (const d of days) {
+    const [nd] = await db.insert(programDays).values({ programId: np.id, title: d.title, orderIndex: d.orderIndex }).returning({ id: programDays.id });
+    await copyDayExercises(d.id, nd.id);
+  }
+  revalidatePath("/coach/programs");
+  return { ok: true, id: np.id };
+}
+
+/** Copy one day (with its prescriptions) into the same program. */
+export async function duplicateProgramDay(dayId: string, programId: string): Promise<void> {
+  await requireCoach();
+  const [d] = await db.select().from(programDays).where(eq(programDays.id, dayId)).limit(1);
+  if (!d) return;
+  const siblings = await db.select({ id: programDays.id }).from(programDays).where(eq(programDays.programId, programId));
+  const [nd] = await db.insert(programDays).values({ programId, title: `${d.title} (copy)`, orderIndex: siblings.length }).returning({ id: programDays.id });
+  await copyDayExercises(dayId, nd.id);
+  revalidatePath(`/coach/programs/${programId}`);
+}
+
+async function copyDayExercises(fromDayId: string, toDayId: string): Promise<void> {
+  const pes = await db.select().from(programExercises).where(eq(programExercises.programDayId, fromDayId)).orderBy(asc(programExercises.orderIndex));
+  if (!pes.length) return;
+  await db.insert(programExercises).values(
+    pes.map((pe) => ({
+      programDayId: toDayId,
+      exerciseId: pe.exerciseId,
+      orderIndex: pe.orderIndex,
+      targetSets: pe.targetSets,
+      targetReps: pe.targetReps,
+      targetRpe: pe.targetRpe,
+      tempo: pe.tempo,
+      restSeconds: pe.restSeconds,
+      notes: pe.notes,
+    })),
+  );
+}
+
 export async function addProgramDay(programId: string, title: string): Promise<void> {
   await requireCoach();
   const clean = title.trim().slice(0, 80);
