@@ -59,16 +59,18 @@ export function AddExerciseToDay({ programId, dayId, library }: { programId: str
 
         {open && (
           <div className="mt-2 rounded-lg border border-line bg-surface-2 p-2">
-            <div className="flex flex-wrap gap-2">
-              <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="input flex-1 min-w-[8rem] py-2 text-sm" aria-label="Search exercises" />
-              <select value={muscle} onChange={(e) => setMuscle(e.target.value)} className="input w-32 py-2 text-sm" aria-label="Filter by muscle group">
-                <option value="">All muscles</option>
-                {muscles.map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
-              <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className="input w-32 py-2 text-sm" aria-label="Filter by equipment">
-                <option value="">All equipment</option>
-                {equipments.map((m) => <option key={m} value={m}>{m}</option>)}
-              </select>
+            <div className="space-y-2">
+              <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search exercises…" className="input" aria-label="Search exercises" />
+              <div className="grid grid-cols-2 gap-2">
+                <select value={muscle} onChange={(e) => setMuscle(e.target.value)} className="input" aria-label="Filter by muscle group">
+                  <option value="">All muscles</option>
+                  {muscles.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <select value={equipment} onChange={(e) => setEquipment(e.target.value)} className="input" aria-label="Filter by equipment">
+                  <option value="">All equipment</option>
+                  {equipments.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
             </div>
             <ul className="mt-2 max-h-56 overflow-y-auto">
               {filtered.map((e) => (
