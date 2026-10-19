@@ -3,9 +3,9 @@ import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { clerkClient } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { z } from "zod";
-import { db, clients, onboardingResponses } from "@/db";
+import { db, clients, onboardingResponses, nutritionPlans } from "@/db";
 import { requireCoach, getMyClientRecord } from "@/lib/auth";
 import { onboardingFieldKeys, onboardingRequiredKeys } from "@/lib/onboarding";
 
@@ -140,4 +140,44 @@ export async function setClientDates(clientId: string, startDate: string, endDat
     .set({ startDate: startDate || null, endDate: endDate || null, updatedAt: new Date() })
     .where(eq(clients.id, clientId));
   revalidatePath(`/coach/clients/${clientId}`);
+}
+
+/** COACH: set a client's nutrition plan (upserts the single active plan). */
+export async function setNutritionPlan(
+  clientId: string,
+  _prev: unknown,
+  formData: FormData,
+): Promise<{ ok: boolean; message: string }> {
+  await requireCoach();
+  const int = (k: string): number | null => {
+    const raw = formData.get(k);
+    const n = Number(raw);
+    return typeof raw === "string" && raw.trim() && Number.isFinite(n) ? Math.round(n) : null;
+  };
+  const str = (k: string, max: number): string => {
+    const v = formData.get(k);
+    return typeof v === "string" ? v.trim().slice(0, max) : "";
+  };
+  const values = {
+    calories: int("calories"),
+    protein: int("protein"),
+    carbs: int("carbs"),
+    fat: int("fat"),
+    mealGuidance: str("mealGuidance", 4000),
+    coachNotes: str("coachNotes", 2000),
+    adherence: str("adherence", 1000),
+    updatedAt: new Date(),
+  };
+  const [existing] = await db
+    .select({ id: nutritionPlans.id })
+    .from(nutritionPlans)
+    .where(and(eq(nutritionPlans.clientId, clientId), eq(nutritionPlans.active, true)))
+    .limit(1);
+  if (existing) {
+    await db.update(nutritionPlans).set(values).where(eq(nutritionPlans.id, existing.id));
+  } else {
+    await db.insert(nutritionPlans).values({ clientId, ...values });
+  }
+  revalidatePath(`/coach/clients/${clientId}`);
+  return { ok: true, message: "Nutrition plan saved." };
 }

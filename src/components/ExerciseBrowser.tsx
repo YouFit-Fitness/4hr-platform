@@ -10,6 +10,7 @@ type Exercise = {
   equipment: string | null;
   movementCategory: string | null;
   videoUrl: string | null;
+  imageUrl: string | null;
   cues: string | null;
   archived: boolean;
 };

@@ -74,6 +74,7 @@ export const exercises = pgTable("exercises", {
   equipment: text("equipment"), // Barbell / Dumbbell / Cable / Machine / Bodyweight / …
   movementCategory: text("movement_category"), // Horizontal Push / Hinge / Squat / Isolation / …
   videoUrl: text("video_url"),
+  imageUrl: text("image_url"), // optional still image, shown when there's no demo video
   cues: text("cues"),
   archived: boolean("archived").notNull().default(false), // hide without deleting (history-safe)
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -140,6 +141,28 @@ export const setLogs = pgTable("set_logs", {
   rpe: text("rpe"),
 });
 
+// ── Phase 2B: Nutrition ─────────────────────────────────────────────────────
+
+/**
+ * A client's nutrition plan (coach-set). One active plan per client, mirroring
+ * the training assignment pattern. All targets are optional so the coach can
+ * give macros, calories only, or guidance only.
+ */
+export const nutritionPlans = pgTable("nutrition_plans", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  clientId: uuid("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
+  active: boolean("active").notNull().default(true),
+  calories: integer("calories"),
+  protein: integer("protein"), // grams/day
+  carbs: integer("carbs"),
+  fat: integer("fat"),
+  mealGuidance: text("meal_guidance").notNull().default(""), // daily structure + food examples
+  coachNotes: text("coach_notes").notNull().default(""),
+  adherence: text("adherence").notNull().default(""), // how strictly to follow it
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type User = typeof users.$inferSelect;
 export type Client = typeof clients.$inferSelect;
 export type OnboardingResponse = typeof onboardingResponses.$inferSelect;
@@ -150,3 +173,4 @@ export type ProgramExercise = typeof programExercises.$inferSelect;
 export type Assignment = typeof assignments.$inferSelect;
 export type WorkoutLog = typeof workoutLogs.$inferSelect;
 export type SetLog = typeof setLogs.$inferSelect;
+export type NutritionPlan = typeof nutritionPlans.$inferSelect;

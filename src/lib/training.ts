@@ -17,6 +17,7 @@ export async function createExercise(_prev: unknown, formData: FormData): Promis
     equipment: str(formData.get("equipment"), 40) || null,
     movementCategory: str(formData.get("movementCategory"), 40) || null,
     videoUrl: str(formData.get("videoUrl"), 500) || null,
+    imageUrl: str(formData.get("imageUrl"), 500) || null,
     cues: str(formData.get("cues"), 1000) || null,
   });
   revalidatePath("/coach/exercises");
@@ -49,6 +50,7 @@ export async function updateExercise(id: string, _prev: unknown, formData: FormD
       equipment: str(formData.get("equipment"), 40) || null,
       movementCategory: str(formData.get("movementCategory"), 40) || null,
       videoUrl: str(formData.get("videoUrl"), 500) || null,
+      imageUrl: str(formData.get("imageUrl"), 500) || null,
       cues: str(formData.get("cues"), 1000) || null,
     })
     .where(eq(exercises.id, id));

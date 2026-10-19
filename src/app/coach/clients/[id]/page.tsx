@@ -6,7 +6,9 @@ import { requireCoach } from "@/lib/auth";
 import { updateCoachNotes, setClientStatus, setClientDates } from "@/lib/actions";
 import { assignProgram } from "@/lib/training";
 import { onboardingSections } from "@/lib/onboarding";
+import { getActiveNutritionPlan } from "@/lib/nutrition";
 import { ClientInviteLinkButton } from "@/components/InviteLink";
+import { NutritionPlanForm } from "@/components/NutritionPlanForm";
 
 const LABELS: Record<string, string> = Object.fromEntries(
   onboardingSections.flatMap((s) => s.fields.map((f) => [f.key, f.label])),
@@ -34,6 +36,8 @@ export default async function ClientDetail({ params }: { params: Promise<{ id: s
     .innerJoin(programs, eq(assignments.programId, programs.id))
     .where(and(eq(assignments.clientId, id), eq(assignments.active, true)))
     .limit(1);
+
+  const nutrition = await getActiveNutritionPlan(id);
 
   // Logged workouts (most recent first) + their sets.
   const logs = await db
@@ -157,6 +161,13 @@ export default async function ClientDetail({ params }: { params: Promise<{ id: s
           {programsList.length === 0 && (
             <p className="mt-2 text-xs text-amber-500">Create a program first (Programs tab).</p>
           )}
+        </section>
+
+        {/* Nutrition plan */}
+        <section className="card p-5">
+          <h2 className="font-semibold">Nutrition plan</h2>
+          <p className="mt-1 text-sm text-fg-muted">Targets + guidance the client sees in their Nutrition tab.</p>
+          <NutritionPlanForm clientId={id} plan={nutrition} />
         </section>
 
         {/* Training log */}

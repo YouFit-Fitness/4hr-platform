@@ -9,6 +9,7 @@ type Exercise = {
   equipment: string | null;
   movementCategory?: string | null;
   videoUrl: string | null;
+  imageUrl?: string | null;
   cues: string | null;
 };
 
@@ -27,6 +28,7 @@ export function EditExerciseForm({ exercise, onDone }: { exercise: Exercise; onD
       </div>
       <input name="movementCategory" defaultValue={exercise.movementCategory ?? ""} placeholder="Movement category" className="input py-2" />
       <input name="videoUrl" type="url" defaultValue={exercise.videoUrl ?? ""} placeholder="Demo video URL" className="input py-2" />
+      <input name="imageUrl" type="url" defaultValue={exercise.imageUrl ?? ""} placeholder="Image URL (used if no video)" className="input py-2" />
       <textarea name="cues" rows={2} defaultValue={exercise.cues ?? ""} placeholder="Coaching cues" className="input resize-y py-2 text-sm" />
       {state && !state.ok && <p className="text-xs text-red-500">{state.message}</p>}
       <div className="flex gap-2">

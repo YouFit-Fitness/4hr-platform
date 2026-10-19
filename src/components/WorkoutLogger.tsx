@@ -10,6 +10,7 @@ type Item = {
   muscleGroup: string | null;
   cues: string | null;
   videoUrl: string | null;
+  imageUrl: string | null;
   targetSets: number | null;
   targetReps: string | null;
   targetRpe: string | null;
@@ -292,8 +293,13 @@ function ExerciseCard({
       )}
       {item.notes && <p className="mt-1 text-xs text-fg-muted">{item.notes}</p>}
 
-      {/* Demo video + coaching cues */}
-      {item.videoUrl && <DemoVideo url={item.videoUrl} name={item.name} />}
+      {/* Demo video → image fallback → (cues only) */}
+      {item.videoUrl ? (
+        <DemoVideo url={item.videoUrl} name={item.name} />
+      ) : item.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={item.imageUrl} alt={`${item.name} demonstration`} className="mt-3 w-full max-h-64 rounded-lg border border-line object-contain bg-surface-2" />
+      ) : null}
       {cues.length > 0 && (
         <div className="mt-3 rounded-lg border border-line/70 bg-surface/40 p-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-fg-muted">Coaching cues</p>

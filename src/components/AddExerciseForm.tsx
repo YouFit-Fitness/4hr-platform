@@ -35,6 +35,10 @@ export function AddExerciseForm() {
         <input name="videoUrl" type="url" placeholder="https://youtu.be/…" className="input" />
       </div>
       <div>
+        <label className="label">Image URL <span className="text-fg-muted font-normal">(optional, used if no video)</span></label>
+        <input name="imageUrl" type="url" placeholder="https://…/exercise.jpg" className="input" />
+      </div>
+      <div>
         <label className="label">Coaching cues <span className="text-fg-muted font-normal">(optional)</span></label>
         <textarea name="cues" rows={2} placeholder="Brace, control the eccentric…" className="input resize-y" />
       </div>

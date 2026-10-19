@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { getSessionUser, getMyClientRecord, isCoachEmailConfigured } from "@/lib/auth";
 import { getActiveProgram } from "@/lib/client-training";
+import { ClientHome } from "@/components/ClientHome";
 
 function totalWeeks(start: string | null, end: string | null): number | null {
   if (!start || !end) return null;
@@ -97,8 +98,8 @@ export default async function Home() {
     );
   }
 
-  // ACTIVE — the client's live portal is the training screen.
-  redirect("/train");
+  // ACTIVE — the client's live portal is the Home dashboard.
+  return <ClientHome client={client} firstName={user.firstName} />;
 }
 
 function Shell({ name, children }: { name: string | null; children: React.ReactNode }) {
