@@ -3,6 +3,7 @@ import { UserButton } from "@clerk/nextjs";
 import { getSessionUser, getMyClientRecord, isCoachEmailConfigured } from "@/lib/auth";
 import { getActiveProgram } from "@/lib/client-training";
 import { ClientHome } from "@/components/ClientHome";
+import { whatsappLink } from "@/lib/contact";
 
 function totalWeeks(start: string | null, end: string | null): number | null {
   if (!start || !end) return null;
@@ -44,8 +45,11 @@ export default async function Home() {
         <p className="mt-3 text-fg-muted">
           Youssef is reviewing your information and building your plan. You&apos;ll get access here as soon as it&apos;s ready.
         </p>
-        <div className="mt-6 card p-4 text-sm text-fg-muted">
-          In the meantime, quick questions? Reach Youssef on WhatsApp as usual.
+        <div className="mt-6 card p-4">
+          <p className="text-sm text-fg-muted">In the meantime, any questions?</p>
+          <a href={whatsappLink("Hi Youssef, quick question while my 4HR plan is being prepared.")} target="_blank" rel="noopener noreferrer" className="btn btn-ghost text-sm mt-2 inline-flex">
+            Message Youssef on WhatsApp
+          </a>
         </div>
       </Shell>
     );
@@ -56,6 +60,9 @@ export default async function Home() {
       <Shell name={user.firstName}>
         <h1 className="text-2xl font-bold">Your coaching is paused</h1>
         <p className="mt-3 text-fg-muted">Reach out to Youssef whenever you&apos;re ready to resume.</p>
+        <a href={whatsappLink("Hi Youssef, I'd like to resume my 4HR coaching.")} target="_blank" rel="noopener noreferrer" className="btn btn-primary text-sm mt-4 inline-flex">
+          Message Youssef on WhatsApp
+        </a>
       </Shell>
     );
   }

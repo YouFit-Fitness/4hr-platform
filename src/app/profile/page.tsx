@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSessionUser, getMyClientRecord } from "@/lib/auth";
 import { getActiveProgram } from "@/lib/client-training";
 import { ClientShell } from "@/components/ClientShell";
+import { whatsappLink } from "@/lib/contact";
 
 const STATUS_LABEL: Record<string, string> = {
   INVITED: "Invited", ONBOARDING: "Onboarding", PLAN_SETUP: "Plan being prepared",
@@ -51,7 +52,15 @@ export default async function ProfilePage() {
 
       <section className="mt-4 card p-5">
         <h2 className="font-semibold">Need help?</h2>
-        <p className="mt-1 text-sm text-fg-muted">Questions about your plan? Reach Youssef on WhatsApp, as usual.</p>
+        <p className="mt-1 text-sm text-fg-muted">Questions about your plan or training? Message Youssef directly.</p>
+        <a
+          href={whatsappLink(`Hi Youssef, I have a question about my 4HR plan${fullName ? ` — ${fullName}` : ""}.`)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn btn-primary text-sm mt-3 inline-flex"
+        >
+          Message your coach on WhatsApp
+        </a>
       </section>
     </ClientShell>
   );
